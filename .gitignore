@@ -6,7 +6,13 @@ Gemfile.lock
 /_yardoc/
 /doc/
 /rdoc/
+/vendor/
 fastlane/README.md
 fastlane/report.xml
 coverage
 test-results
+
+# Built application files:
+*.apk
+*.aab
+*.ipa
