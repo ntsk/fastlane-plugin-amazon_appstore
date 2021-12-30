@@ -20,7 +20,7 @@ module Fastlane
             app_id: params[:package_name],
             token: token
           )
-        rescue Exception => e
+        rescue StandardError => e
           UI.error(e.message)
           UI.abort_with_message!("Failed to create edits")
         end
@@ -35,7 +35,7 @@ module Fastlane
             edit_id: edit_id,
             token: token
           )
-        rescue Exception => e
+        rescue StandardError => e
           UI.error(e.message)
           UI.abort_with_message!("Failed to replace apk")
         end
@@ -48,7 +48,7 @@ module Fastlane
             edit_id: edit_id,
             token: token
           )
-        rescue Exception => e
+        rescue StandardError => e
           UI.error(e.message)
           UI.abort_with_message!("Failed to update listings")
         end
@@ -56,12 +56,12 @@ module Fastlane
         UI.message('------------------')
         UI.important("Committing edits")
         begin
-        commit_edits_response = Helper::AmazonAppstoreHelper.commit_edits(
-          app_id: params[:package_name],
-          edit_id: edit_id,
-          token: token
-        )
-        rescue Exception => e
+          Helper::AmazonAppstoreHelper.commit_edits(
+            app_id: params[:package_name],
+            edit_id: edit_id,
+            token: token
+          )
+        rescue StandardError => e
           UI.error(e.message)
           UI.abort_with_message!("Failed to commit edits")
         end
@@ -88,26 +88,26 @@ module Fastlane
 
       def self.available_options
         [
-           FastlaneCore::ConfigItem.new(key: :client_id,
-                                   env_name: "AMAZON_APPSTORE_CLIENT_ID",
-                                description: "Your client id",
-                                   optional: false,
-                                       type: String),
-           FastlaneCore::ConfigItem.new(key: :client_secret,
-                                   env_name: "AMAZON_APPSTORE_CLIENT_SECRET",
-                                description: "Your client secret",
-                                   optional: false,
-                                       type: String),
-           FastlaneCore::ConfigItem.new(key: :package_name,
-                                   env_name: "AMAZON_APPSTORE_PACKAGE_NAME",
-                                description: "Your application's package name",
-                                   optional: false,
-                                       type: String),
-           FastlaneCore::ConfigItem.new(key: :apk,
-                                   env_name: "AMAZON_APPSTORE_APK",
-                                description: "The path of the apk file",
-                                   optional: false,
-                                       type: String)
+          FastlaneCore::ConfigItem.new(key: :client_id,
+                                  env_name: "AMAZON_APPSTORE_CLIENT_ID",
+                               description: "Your client id",
+                                  optional: false,
+                                      type: String),
+          FastlaneCore::ConfigItem.new(key: :client_secret,
+                                  env_name: "AMAZON_APPSTORE_CLIENT_SECRET",
+                               description: "Your client secret",
+                                  optional: false,
+                                      type: String),
+          FastlaneCore::ConfigItem.new(key: :package_name,
+                                  env_name: "AMAZON_APPSTORE_PACKAGE_NAME",
+                               description: "Your application's package name",
+                                  optional: false,
+                                      type: String),
+          FastlaneCore::ConfigItem.new(key: :apk,
+                                  env_name: "AMAZON_APPSTORE_APK",
+                               description: "The path of the apk file",
+                                  optional: false,
+                                      type: String)
         ]
       end
 
