@@ -1,7 +1,7 @@
 # amazon_appstore `fastlane` plugin
 
 [![fastlane Plugin Badge](https://rawcdn.githack.com/fastlane/fastlane/master/fastlane/assets/plugin-badge.svg)](https://rubygems.org/gems/fastlane-plugin-amazon_appstore)
-![](https://github.com/ntsk/fastlane-plugin-amazon_appstore/workflows/test/badge.svg)
+![](https://github.com/ntsk/fastlane-plugin-amazon_appstore/actions/workflows/test/badge.svg)
 
 ## Getting Started
 
