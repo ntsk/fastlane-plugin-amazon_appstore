@@ -167,12 +167,12 @@ module Fastlane
         return changelog_text if skip_upload_changelogs
 
         path = File.join(metadata_path, language, 'changelogs', "#{version_code}.txt")
-        if File.exists?(path)
+        if File.exist?(path)
           UI.message("Updating changelog for '#{version_code}' and language '#{language}'...")
           changelog_text = File.read(path, encoding: 'UTF-8')
         else
           defalut_changelog_path = File.join(metadata_path, language, 'changelogs', 'default.txt')
-          if File.exists?(defalut_changelog_path)
+          if File.exist?(defalut_changelog_path)
             UI.message("Updating changelog for '#{version_code}' and language '#{language}' to default changelog...")
             changelog_text = File.read(defalut_changelog_path, encoding: 'UTF-8')
           else

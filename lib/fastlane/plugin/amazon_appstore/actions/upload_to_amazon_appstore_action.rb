@@ -5,7 +5,6 @@ module Fastlane
   module Actions
     class UploadToAmazonAppstoreAction < Action
       def self.run(params)
-
         Helper::AmazonAppstoreHelper.setup(
           timeout: params[:timeout]
         )
