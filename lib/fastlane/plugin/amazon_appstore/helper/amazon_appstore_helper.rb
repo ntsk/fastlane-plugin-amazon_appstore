@@ -12,6 +12,11 @@ module Fastlane
       AUTH_URL = 'https://api.amazon.com/auth/o2/token'
 
       @api_client = nil
+      @timeout = nil
+
+      def self.setup(timeout:)
+        @timeout = timeout
+      end
 
       def self.token(client_id:, client_secret:)
         grant_type = 'client_credentials'
@@ -134,6 +139,8 @@ module Fastlane
 
       def self.api_client
         @api_client ||= Faraday.new(url: BASE_URL) do |builder|
+          builder.options.open_timeout = @timeout unless @timeout.nil?
+          builder.options.timeout = @timeout unless @timeout.nil?
           builder.request(:multipart)
           builder.request(:url_encoded)
           builder.response(:json, parser_options: { symbolize_names: true })
@@ -144,6 +151,8 @@ module Fastlane
 
       def self.auth_client
         Faraday.new(url: AUTH_URL) do |builder|
+          builder.options.open_timeout = @timeout unless @timeout.nil?
+          builder.options.timeout = @timeout unless @timeout.nil?
           builder.request(:url_encoded)
           builder.response(:json, parser_options: { symbolize_names: true })
           builder.adapter(Faraday.default_adapter)

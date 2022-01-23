@@ -5,6 +5,11 @@ module Fastlane
   module Actions
     class UploadToAmazonAppstoreAction < Action
       def self.run(params)
+
+        Helper::AmazonAppstoreHelper.setup(
+          timeout: params[:timeout]
+        )
+
         UI.message('------------------')
         UI.important("Fetching access token")
         token = Helper::AmazonAppstoreHelper.token(
@@ -136,7 +141,13 @@ module Fastlane
                                description: "Indices that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI",
                              default_value: false,
                                   optional: true,
-                                      type: Boolean)
+                                      type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :timeout,
+                                  env_name: "AMAZON_APPSTORE_TIMEOUT",
+                               description: "Timeout for read, open (in seconds)",
+                             default_value: 300,
+                                  optional: true,
+                                      type: Integer)
         ]
       end
 
