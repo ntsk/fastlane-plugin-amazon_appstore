@@ -1,7 +1,6 @@
 describe Fastlane::Actions::UploadToAmazonAppstoreAction do
-
   describe '#run' do
-    let(:params) {
+    let(:params) do
       {
         client_id: 'client_id',
         client_secret: 'client_secret',
@@ -12,7 +11,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
         changes_not_sent_for_review: false,
         timeout: 300
       }
-    }
+    end
 
     before do
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:setup).and_return(nil)
@@ -81,7 +80,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
     end
 
     context 'changes_not_sent_for_review' do
-      let(:params) {
+      let(:params) do
         {
           client_id: 'client_id',
           client_secret: 'client_secret',
@@ -92,7 +91,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
           changes_not_sent_for_review: false,
           timeout: 300
         }
-      }
+      end
       it 'should not call commit_edits' do
         Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
         expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:commit_edits)

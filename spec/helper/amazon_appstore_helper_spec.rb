@@ -15,14 +15,14 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:client_secret) { 'client_secret' }
 
     context 'success' do
-      let(:response_body) {
+      let(:response_body) do
         {
           access_token: 'access_token',
           scope: 'appstore::apps:readwrite',
           token_type: 'bearer',
           exipres_in: 3600
         }
-      }
+      end
       it 'should return access_token' do
         allow_any_instance_of(Faraday::Connection).to receive(:post).and_return(
           double(Faraday::Response, status: 201, body: response_body, success?: true)
@@ -32,17 +32,17 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
 
     context 'failure' do
-      let(:response_error_body) {
+      let(:response_error_body) do
         {
           error_description: "Client authentication failed",
           error: "invalid_client"
         }
-      }
+      end
       it 'should raise error' do
         allow_any_instance_of(Faraday::Connection).to receive(:post).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.token(client_id: client_id, client_secret: client_secret) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.token(client_id: client_id, client_secret: client_secret) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
   end
@@ -53,12 +53,12 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:url) { "api/appstore/v1/applications/#{app_id}/edits" }
 
     context 'success' do
-      let(:response_body) {
+      let(:response_body) do
         {
           id: 'id',
           status: 'IN_PROGRESS'
         }
-      }
+      end
       it 'should return edit_id' do
         allow_any_instance_of(Faraday::Connection).to receive(:post).with(url).and_return(
           double(Faraday::Response, status: 201, body: response_body, success?: true)
@@ -68,17 +68,17 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
 
     context 'failure' do
-      let(:response_error_body) {
+      let(:response_error_body) do
         {
           error_description: "Client authentication failed",
           error: "invalid_client"
         }
-      }
+      end
       it 'should raise error' do
         allow_any_instance_of(Faraday::Connection).to receive(:post).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.create_edits(app_id: app_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.create_edits(app_id: app_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
   end
@@ -93,7 +93,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:apks_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks" }
     let(:apk_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_1}" }
     let(:replace_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_1}/replace" }
-    let(:apks_response_body) {
+    let(:apks_response_body) do
       [
         {
           versionCode: '1000000',
@@ -106,20 +106,20 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           name: 'APK2'
         }
       ]
-    }
-    let(:apk_response_body) {
+    end
+    let(:apk_response_body) do
       {
         versionCode: '1000000',
         id: apk_id_1,
         name: 'APK1'
       }
-    }
-    let(:response_error_body) {
+    end
+    let(:response_error_body) do
       {
         error_description: "Client authentication failed",
         error: "invalid_client"
       }
-    }
+    end
 
     before do
       allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
@@ -144,12 +144,12 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
 
     context 'failed to get apk_id' do
-      let(:apks_response_body) {
+      let(:apks_response_body) do
         [
           {
             versionCode: '1000000',
@@ -160,12 +160,12 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
             name: 'APK2'
           }
         ]
-      }
+      end
       it 'should raise error' do
         allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
           double(Faraday::Response, status: 200, body: apks_response_body, success?: true)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, 'apk_id is nil')
+        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, 'apk_id is nil')
       end
     end
 
@@ -174,7 +174,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:get).with(apk_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
 
@@ -183,7 +183,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:put).with(replace_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
   end
@@ -246,12 +246,12 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         keywords: ['keywords']
       }
     end
-    let(:response_error_body) {
+    let(:response_error_body) do
       {
         error_description: "Client authentication failed",
         error: "invalid_client"
       }
-    }
+    end
 
     before do
       allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
@@ -276,7 +276,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
 
@@ -285,7 +285,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:put).with(us_listings_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
   end
@@ -296,18 +296,18 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:token) { 'token' }
     let(:edits_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}" }
     let(:commit_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/commit" }
-    let(:response_body) {
+    let(:response_body) do
       {
         id: 'id',
         status: 'IN_PROGRESS'
       }
-    }
-    let(:response_error_body) {
+    end
+    let(:response_error_body) do
       {
         error_description: "Client authentication failed",
         error: "invalid_client"
       }
-    }
+    end
 
     before do
       allow_any_instance_of(Faraday::Connection).to receive(:get).with(edits_url).and_return(
@@ -329,7 +329,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:get).with(edits_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.commit_edits(app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.commit_edits(app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
 
@@ -338,7 +338,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         allow_any_instance_of(Faraday::Connection).to receive(:post).with(commit_url).and_return(
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
-        expect{ Fastlane::Helper::AmazonAppstoreHelper.commit_edits(app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect { Fastlane::Helper::AmazonAppstoreHelper.commit_edits(app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
       end
     end
   end

@@ -88,6 +88,8 @@ Metrics/MethodLength:
   Enabled: false
 Metrics/CyclomaticComplexity:
   Enabled: false
+Metrics/PerceivedComplexity:
+  Max: 11
 Style/WordArray:
   MinSize: 19
 Style/SignalException:
