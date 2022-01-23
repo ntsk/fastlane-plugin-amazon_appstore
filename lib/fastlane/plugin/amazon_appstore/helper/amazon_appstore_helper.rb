@@ -73,10 +73,10 @@ module Fastlane
         raise StandardError, replace_apk_response.body unless replace_apk_response.success?
 
         UI.message(replace_apk_response.body) if replace_apk_response.success?
-        nil
+        replace_apk_response.body[:versionCode]
       end
 
-      def self.update_listings(app_id:, edit_id:, token:)
+      def self.update_listings(app_id:, edit_id:, token:, version_code:, skip_upload_changelogs:, metadata_path:)
         listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings"
         listings_response = api_client.get(listings_path) do |request|
           request.headers['Authorization'] = "Bearer #{token}"
@@ -91,8 +91,13 @@ module Fastlane
 
           etag = etag_response.headers['Etag']
 
-          # TODO: load metadata from files
-          listing[:recentChanges] = '-'
+          recent_changes = find_changelog(
+            language: listing[:language],
+            version_code: version_code,
+            skip_upload_changelogs: skip_upload_changelogs,
+            metadata_path: metadata_path
+          )
+          listing[:recentChanges] = recent_changes
 
           update_listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{lang}"
           update_listings_response = api_client.put(update_listings_path) do |request|
@@ -145,6 +150,29 @@ module Fastlane
         end
       end
       private_class_method :auth_client
+
+      def self.find_changelog(language:, version_code:, skip_upload_changelogs:, metadata_path:)
+        # The Amazon appstore requires you to enter changelogs before reviewing.
+        # Therefore, if there is no metadata, hyphen text is returned.
+        changelog_text = '-'
+        return changelog_text if skip_upload_changelogs
+
+        path = File.join(metadata_path, language, 'changelogs', "#{version_code}.txt")
+        if File.exists?(path)
+          UI.message("Updating changelog for '#{version_code}' and language '#{language}'...")
+          changelog_text = File.read(path, encoding: 'UTF-8')
+        else
+          defalut_changelog_path = File.join(metadata_path, language, 'changelogs', 'default.txt')
+          if File.exists?(defalut_changelog_path)
+            UI.message("Updating changelog for '#{version_code}' and language '#{language}' to default changelog...")
+            changelog_text = File.read(defalut_changelog_path, encoding: 'UTF-8')
+          else
+            UI.message("Could not find changelog for '#{version_code}' and language '#{language}' at path #{path}...")
+          end
+        end
+        changelog_text
+      end
+      private_class_method :find_changelog
     end
   end
 end

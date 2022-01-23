@@ -29,7 +29,7 @@ module Fastlane
         UI.message('------------------')
         UI.important("Replacing apk")
         begin
-          Helper::AmazonAppstoreHelper.replace_apk(
+          version_code = Helper::AmazonAppstoreHelper.replace_apk(
             local_apk_path: params[:apk],
             app_id: params[:package_name],
             edit_id: edit_id,
@@ -39,6 +39,7 @@ module Fastlane
           UI.error(e.message)
           UI.abort_with_message!("Failed to replace apk")
         end
+        UI.abort_with_message!("Failed to get version_code") if version_code.nil?
 
         UI.message('------------------')
         UI.important("Update listings")
@@ -46,7 +47,10 @@ module Fastlane
           Helper::AmazonAppstoreHelper.update_listings(
             app_id: params[:package_name],
             edit_id: edit_id,
-            token: token
+            token: token,
+            version_code: version_code,
+            skip_upload_changelogs: params[:skip_upload_changelogs],
+            metadata_path: params[:metadata_path]
           )
         rescue StandardError => e
           UI.error(e.message)
@@ -108,6 +112,18 @@ module Fastlane
                                   env_name: "AMAZON_APPSTORE_APK",
                                description: "The path of the apk file",
                                   optional: false,
+                                      type: String),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_changelogs,
+                                  env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_CHANGELOGS",
+                               description: "Whether to skip uploading changelogs",
+                             default_value: false,
+                                  optional: true,
+                                      type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :metadata_path,
+                                  env_name: "AMAZON_APPSTORE_METADATA_PATH",
+                               description: "Path to the directory containing the metadata files",
+                             default_value: "./fastlane/metadata/android",
+                                  optional: true,
                                       type: String)
         ]
       end
