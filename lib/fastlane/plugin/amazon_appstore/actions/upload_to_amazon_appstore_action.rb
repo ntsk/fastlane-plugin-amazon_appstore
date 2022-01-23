@@ -57,6 +57,12 @@ module Fastlane
           UI.abort_with_message!("Failed to update listings")
         end
 
+        if params[:changes_not_sent_for_review]
+          UI.message('------------------')
+          UI.success('Success')
+          return
+        end
+
         UI.message('------------------')
         UI.important("Committing edits")
         begin
@@ -124,7 +130,13 @@ module Fastlane
                                description: "Path to the directory containing the metadata files",
                              default_value: "./fastlane/metadata/android",
                                   optional: true,
-                                      type: String)
+                                      type: String),
+          FastlaneCore::ConfigItem.new(key: :changes_not_sent_for_review,
+                                  env_name: "AMAZON_APPSTORE_CHANGES_NOT_SENT_FOR_REVIEW",
+                               description: "Indices that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI",
+                             default_value: false,
+                                  optional: true,
+                                      type: Boolean)
         ]
       end
 
