@@ -30,6 +30,13 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
       end
     end
 
+    context 'failed to get token' do
+      it 'should raise error' do
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:token).and_raise('error')
+        expect { Fastlane::Actions::UploadToAmazonAppstoreAction.run(params) }.to raise_error(FastlaneCore::Interface::FastlaneCommonException, 'Failed to get token')
+      end
+    end
+
     context 'access token is nil' do
       it 'should raise error' do
         allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:token).and_return(nil)

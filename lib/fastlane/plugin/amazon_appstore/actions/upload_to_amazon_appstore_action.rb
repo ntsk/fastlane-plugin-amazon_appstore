@@ -11,10 +11,15 @@ module Fastlane
 
         UI.message('------------------')
         UI.important("Fetching access token")
-        token = Helper::AmazonAppstoreHelper.token(
-          client_id: params[:client_id],
-          client_secret: params[:client_secret]
-        )
+        begin
+          token = Helper::AmazonAppstoreHelper.token(
+            client_id: params[:client_id],
+            client_secret: params[:client_secret]
+          )
+        rescue StandardError => e
+          UI.error(e.message)
+          UI.abort_with_message!("Failed to get token")
+        end
         UI.abort_with_message!("Failed to get token") if token.nil?
 
         UI.message('------------------')
