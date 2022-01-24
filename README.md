@@ -24,19 +24,11 @@ Following the [guide](https://developer.amazon.com/docs/app-submission-api/auth.
 Call `upload_to_amazon_appstore` in your Fastfile.
 
 ```ruby
-platform :android do
-  lane :upload_to_amazon_appstore do
-    upload_to_amazon_appstore(
-      apk: "app/build/outputs/apk/release/app-release.apk",
-      client_id: <YOUR_CLIENT_ID>,
-      client_secret: <YOUR_CLIENT_SECRET>
-    )
-  end
-end
-```
-
-```bash
-fastlane android upload_to_amazon_appstore
+upload_to_amazon_appstore(
+  apk: "app/build/outputs/apk/release/app-release.apk",
+  client_id: <YOUR_CLIENT_ID>,
+  client_secret: <YOUR_CLIENT_SECRET>
+)
 ```
 
 ### Parameters
