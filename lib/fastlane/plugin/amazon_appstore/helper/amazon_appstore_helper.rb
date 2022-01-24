@@ -33,7 +33,6 @@ module Fastlane
         end
         raise StandardError, auth_response.body unless auth_response.success?
 
-        UI.message(auth_response.body)
         auth_response.body[:access_token]
       end
 
@@ -44,7 +43,6 @@ module Fastlane
         end
         raise StandardError, create_edits_response.body unless create_edits_response.success?
 
-        UI.message(create_edits_response.body)
         create_edits_response.body[:id]
       end
 
@@ -77,7 +75,6 @@ module Fastlane
         end
         raise StandardError, replace_apk_response.body unless replace_apk_response.success?
 
-        UI.message(replace_apk_response.body) if replace_apk_response.success?
         replace_apk_response.body[:versionCode]
       end
 
@@ -111,8 +108,6 @@ module Fastlane
             request.headers['If-Match'] = etag
           end
           raise StandardError, update_listings_response.body unless update_listings_response.success?
-
-          UI.message(update_listings_response.body) if update_listings_response.success?
         end
         nil
       end
@@ -133,7 +128,6 @@ module Fastlane
         end
         raise StandardError, commit_edits_response.body unless commit_edits_response.success?
 
-        UI.message(commit_edits_response.body) if commit_edits_response.success?
         nil
       end
 

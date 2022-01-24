@@ -9,8 +9,7 @@ module Fastlane
           timeout: params[:timeout]
         )
 
-        UI.message('------------------')
-        UI.important("Fetching access token")
+        UI.message("Fetching access token...")
         begin
           token = Helper::AmazonAppstoreHelper.token(
             client_id: params[:client_id],
@@ -22,8 +21,7 @@ module Fastlane
         end
         UI.abort_with_message!("Failed to get token") if token.nil?
 
-        UI.message('------------------')
-        UI.important("Creating new edits")
+        UI.message("Creating new edits...")
         begin
           edit_id = Helper::AmazonAppstoreHelper.create_edits(
             app_id: params[:package_name],
@@ -35,8 +33,7 @@ module Fastlane
         end
         UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
 
-        UI.message('------------------')
-        UI.important("Replacing apk")
+        UI.message("Replacing apk...")
         begin
           version_code = Helper::AmazonAppstoreHelper.replace_apk(
             local_apk_path: params[:apk],
@@ -50,8 +47,7 @@ module Fastlane
         end
         UI.abort_with_message!("Failed to get version_code") if version_code.nil?
 
-        UI.message('------------------')
-        UI.important("Update listings")
+        UI.message("Updating release notes...")
         begin
           Helper::AmazonAppstoreHelper.update_listings(
             app_id: params[:package_name],
@@ -67,13 +63,11 @@ module Fastlane
         end
 
         if params[:changes_not_sent_for_review]
-          UI.message('------------------')
-          UI.success('Success')
+          UI.success('Successfully finished the upload to Amazon Appstore')
           return
         end
 
-        UI.message('------------------')
-        UI.important("Committing edits")
+        UI.message("Committing edits...")
         begin
           Helper::AmazonAppstoreHelper.commit_edits(
             app_id: params[:package_name],
@@ -85,8 +79,7 @@ module Fastlane
           UI.abort_with_message!("Failed to commit edits")
         end
 
-        UI.message('------------------')
-        UI.success('Success')
+        UI.success('Successfully finished the upload to Amazon Appstore')
       end
 
       def self.description
