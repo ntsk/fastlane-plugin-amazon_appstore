@@ -35,7 +35,7 @@ upload_to_amazon_appstore(
 | Key                         | Description                                                                                                                                | Default                     | 
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- | 
 | package_name                | The package name of the application to use                                                                                                 | *                           | 
-| apk                         | Path to the APK file to upload                                                                                                             | *                           | 
+| apk                         | Path to the APK file to upload                                                                                                             |                             | 
 | client_id                   | The client ID you saved                                                                                                                    |                             | 
 | client_secret               | The client secret you saved                                                                                                                |                             | 
 | skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       | 
