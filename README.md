@@ -40,7 +40,7 @@ upload_to_amazon_appstore(
 | client_secret               | The client secret you saved                                                                                                                |                             | 
 | skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       | 
 | metadata_path               | Path to the directory containing the metadata files                                                                                        | ./fastlane/metadata/android | 
-| changes_not_sent_for_reivew | Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI | false                       | 
+| changes_not_sent_for_review | Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI | false                       | 
 | timeout                     | Timeout for read, open (in seconds)                                                                                                        | 300                         | 
 * = default value is dependent on the user's system
 
