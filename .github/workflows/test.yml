@@ -11,8 +11,8 @@ jobs:
         ruby: [2.5, 2.6, 2.7, '3.0', 3.1]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v1
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
       with:
         path: vendor/bundle
         key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile') }}
@@ -27,7 +27,7 @@ jobs:
     - name: Run tests
       run: bundle exec rake
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
-        name: test-results
+        name: test-results-${{ matrix.ruby }}
         path: test-results
