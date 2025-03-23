@@ -4,7 +4,7 @@ require_relative '../helper/amazon_appstore_helper'
 module Fastlane
   module Actions
     class UploadToAmazonAppstoreAction < Action
-      def self.run(params)
+      def self.run(params) # rubocop:disable Metrics/PerceivedComplexity
         Helper::AmazonAppstoreHelper.setup(
           timeout: params[:timeout]
         )
@@ -20,6 +20,19 @@ module Fastlane
           UI.abort_with_message!("Failed to get token")
         end
         UI.abort_with_message!("Failed to get token") if token.nil?
+
+        if params[:overwrite_upload]
+          UI.message("Deleting existing edits if needed (overwrite_upload: true)...")
+          begin
+            Helper::AmazonAppstoreHelper.delete_edits_if_exists(
+              app_id: params[:package_name],
+              token: token
+            )
+          rescue StandardError => e
+            UI.error(e.message)
+            UI.abort_with_message!("Failed to delete edits (overwrite_upload: true)")
+          end
+        end
 
         UI.message("Creating new edits...")
         begin
