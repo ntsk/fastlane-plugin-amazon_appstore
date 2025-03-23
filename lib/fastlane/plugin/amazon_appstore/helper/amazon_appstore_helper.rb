@@ -46,6 +46,25 @@ module Fastlane
         create_edits_response.body[:id]
       end
 
+      def self.delete_edits_if_exists(app_id:, token:)
+        edits_path = "api/appstore/v1/applications/#{app_id}/edits"
+        edits_response = api_client.get(edits_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, edits_response.body unless edits_response.success?
+
+        edits_id = edits_response.body[:id]
+        etag = edits_response.headers['Etag']
+        return nil if edits_id.nil? || etag.nil? # Do nothing if edits do not exist
+
+        delete_edits_response = api_client.delete("#{edits_path}/#{edits_id}") do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+
+        raise StandardError, delete_edits_response.body unless delete_edits_response.success?
+      end
+
       def self.replace_apk(local_apk_path:, app_id:, edit_id:, token:)
         get_apks_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks"
         get_apks_response = api_client.get(get_apks_path) do |request|

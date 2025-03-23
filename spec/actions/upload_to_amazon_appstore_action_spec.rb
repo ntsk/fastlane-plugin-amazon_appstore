@@ -9,6 +9,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
         skip_upload_changelogs: false,
         metadata_path: './fastlane/metadata/android',
         changes_not_sent_for_review: false,
+        overwrite_upload: false,
         timeout: 300
       }
     end
@@ -16,6 +17,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
     before do
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:setup).and_return(nil)
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:token).and_return('token')
+      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:delete_edits_if_exists).and_return(nil)
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:create_edits).and_return('edit_id')
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:replace_apk).and_return('version_code')
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_listings).and_return(nil)
@@ -96,6 +98,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
           skip_upload_changelogs: false,
           metadata_path: './fastlane/metadata/android',
           changes_not_sent_for_review: false,
+          overwrite_upload: false,
           timeout: 300
         }
       end
@@ -108,6 +111,62 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
         allow(Fastlane::UI).to receive(:success).and_return(true)
         Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
         expect(Fastlane::UI).to have_received(:success).once
+      end
+    end
+
+    context 'overwrite_upload' do
+      context 'enabled' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            apk: 'apk',
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: true,
+            timeout: 300
+          }
+        end
+
+        it 'should call delete_edits_if_exists' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:delete_edits_if_exists)
+        end
+
+        it 'should call UI.success' do
+          allow(Fastlane::UI).to receive(:success).and_return(true)
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::UI).to have_received(:success).once
+        end
+      end
+
+      context 'disabled' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            apk: 'apk',
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: false,
+            timeout: 300
+          }
+        end
+
+        it 'should not call delete_edits_if_exists' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:delete_edits_if_exists)
+        end
+
+        it 'should call UI.success' do
+          allow(Fastlane::UI).to receive(:success).and_return(true)
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::UI).to have_received(:success).once
+        end
       end
     end
   end
@@ -138,7 +197,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
 
   describe '#available_options' do
     it 'should return options' do
-      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(8)
+      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(9)
     end
   end
 

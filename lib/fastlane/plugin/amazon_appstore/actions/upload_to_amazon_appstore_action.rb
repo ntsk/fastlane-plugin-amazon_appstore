@@ -4,7 +4,7 @@ require_relative '../helper/amazon_appstore_helper'
 module Fastlane
   module Actions
     class UploadToAmazonAppstoreAction < Action
-      def self.run(params)
+      def self.run(params) # rubocop:disable Metrics/PerceivedComplexity
         Helper::AmazonAppstoreHelper.setup(
           timeout: params[:timeout]
         )
@@ -20,6 +20,19 @@ module Fastlane
           UI.abort_with_message!("Failed to get token")
         end
         UI.abort_with_message!("Failed to get token") if token.nil?
+
+        if params[:overwrite_upload]
+          UI.message("Deleting existing edits if needed (overwrite_upload: true)...")
+          begin
+            Helper::AmazonAppstoreHelper.delete_edits_if_exists(
+              app_id: params[:package_name],
+              token: token
+            )
+          rescue StandardError => e
+            UI.error(e.message)
+            UI.abort_with_message!("Failed to delete edits (overwrite_upload: true)")
+          end
+        end
 
         UI.message("Creating new edits...")
         begin
@@ -136,6 +149,12 @@ module Fastlane
           FastlaneCore::ConfigItem.new(key: :changes_not_sent_for_review,
                                        env_name: "AMAZON_APPSTORE_CHANGES_NOT_SENT_FOR_REVIEW",
                                        description: "Indices that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI",
+                                       default_value: false,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :overwrite_upload,
+                                       env_name: "AMAZON_APPSTORE_OVERWRITE_UPLOAD",
+                                       description: "Whether to allow overwriting an existing upload",
                                        default_value: false,
                                        optional: true,
                                        type: Boolean),

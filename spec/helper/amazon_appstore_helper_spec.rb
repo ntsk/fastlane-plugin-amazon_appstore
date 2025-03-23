@@ -47,6 +47,86 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#delete_edits_if_exists' do
+    let(:app_id) { 'app_id' }
+    let(:token) { 'token' }
+    let(:url) { "api/appstore/v1/applications/#{app_id}/edits" }
+
+    context 'success' do
+      let(:response_body) do
+        {
+          id: 'id',
+          status: 'IN_PROGRESS'
+        }
+      end
+
+      let(:response_body_empty) do
+        {}
+      end
+
+      let(:headers) do
+        { 'Etag' => 'ABCD' }
+      end
+
+      it 'deletes the edit if it exists' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true, headers: headers)
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with("#{url}/id").and_return(
+          double(Faraday::Response, status: 204, body: response_body_empty, success?: true)
+        )
+        expect(Fastlane::Helper::AmazonAppstoreHelper.delete_edits_if_exists(app_id: app_id, token: token)).to eq(nil)
+      end
+
+      it 'does nothing if the edit does not exist' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(url).and_return(
+          double(Faraday::Response, status: 200, body: response_body_empty, success?: true, headers: headers)
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with("#{url}/id").and_return(
+          double(Faraday::Response, status: 204, body: response_body_empty, success?: true)
+        )
+        expect(Fastlane::Helper::AmazonAppstoreHelper.delete_edits_if_exists(app_id: app_id, token: token)).to eq(nil)
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) do
+        {
+          error_description: "Client authentication failed",
+          error: "invalid_client"
+        }
+      end
+
+      let(:response_body) do
+        {
+          id: 'id',
+          status: 'IN_PROGRESS'
+        }
+      end
+
+      let(:headers) do
+        { 'Etag' => 'ABCD' }
+      end
+
+      it 'raises an error if GET request failed' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).and_return(
+          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
+        )
+        expect { Fastlane::Helper::AmazonAppstoreHelper.delete_edits_if_exists(app_id: app_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+      end
+
+      it 'raises an error if DELETE request failed' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true, headers: headers)
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with("#{url}/id").and_return(
+          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
+        )
+        expect { Fastlane::Helper::AmazonAppstoreHelper.delete_edits_if_exists(app_id: app_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#create_edits' do
     let(:app_id) { 'app_id' }
     let(:token) { 'token' }
