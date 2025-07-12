@@ -184,10 +184,10 @@ module Fastlane
           UI.message("Updating changelog for '#{version_code}' and language '#{language}'...")
           changelog_text = File.read(path, encoding: 'UTF-8')
         else
-          defalut_changelog_path = File.join(metadata_path, language, 'changelogs', 'default.txt')
-          if File.exist?(defalut_changelog_path) && !File.empty?(defalut_changelog_path)
+          default_changelog_path = File.join(metadata_path, language, 'changelogs', 'default.txt')
+          if File.exist?(default_changelog_path) && !File.empty?(default_changelog_path)
             UI.message("Updating changelog for '#{version_code}' and language '#{language}' to default changelog...")
-            changelog_text = File.read(defalut_changelog_path, encoding: 'UTF-8')
+            changelog_text = File.read(default_changelog_path, encoding: 'UTF-8')
           else
             UI.message("Could not find changelog for '#{version_code}' and language '#{language}' at path #{path}...")
           end
