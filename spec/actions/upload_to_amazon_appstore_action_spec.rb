@@ -88,23 +88,24 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
       end
     end
 
-    context 'changes_not_sent_for_review' do
-      let(:params) do
-        {
-          client_id: 'client_id',
-          client_secret: 'client_secret',
-          package_name: 'package_name',
-          apk: 'apk',
-          skip_upload_changelogs: false,
-          metadata_path: './fastlane/metadata/android',
-          changes_not_sent_for_review: false,
-          overwrite_upload: false,
-          timeout: 300
-        }
-      end
-      it 'should not call commit_edits' do
+    context 'when changes_not_sent_for_review is false' do
+      it 'should call commit_edits' do
         Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
         expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:commit_edits)
+      end
+
+      it 'should call UI.success' do
+        allow(Fastlane::UI).to receive(:success).and_return(true)
+        Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+        expect(Fastlane::UI).to have_received(:success).once
+      end
+    end
+
+    context 'when changes_not_sent_for_review is true' do
+      let(:params) { { changes_not_sent_for_review: true } }
+      it 'should not call commit_edits' do
+        Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:commit_edits)
       end
 
       it 'should call UI.success' do
