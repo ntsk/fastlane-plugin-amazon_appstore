@@ -20,7 +20,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           access_token: 'access_token',
           scope: 'appstore::apps:readwrite',
           token_type: 'bearer',
-          exipres_in: 3600
+          expires_in: 3600
         }
       end
       it 'should return access_token' do
