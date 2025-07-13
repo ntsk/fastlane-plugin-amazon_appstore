@@ -148,7 +148,7 @@ module Fastlane
                                        type: String),
           FastlaneCore::ConfigItem.new(key: :changes_not_sent_for_review,
                                        env_name: "AMAZON_APPSTORE_CHANGES_NOT_SENT_FOR_REVIEW",
-                                       description: "Indices that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI",
+                                       description: "Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI",
                                        default_value: false,
                                        optional: true,
                                        type: Boolean),

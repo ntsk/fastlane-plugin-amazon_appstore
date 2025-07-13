@@ -178,7 +178,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
   end
 
   describe '#authors' do
-    it 'should return authers' do
+    it 'should return authors' do
       expect(Fastlane::Actions::UploadToAmazonAppstoreAction.authors).to eq(["ntsk"])
     end
   end
