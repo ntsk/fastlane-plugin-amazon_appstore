@@ -47,6 +47,19 @@ module Fastlane
       end
 
       def self.delete_edits_if_exists(app_id:, token:)
+        edits_id, etag = self.get_edits(app_id: app_id, token: token)
+        return nil if edits_id.nil? || etag.nil? # Do nothing if edits do not exist
+
+        edits_path = "api/appstore/v1/applications/#{app_id}/edits"
+        delete_edits_response = api_client.delete("#{edits_path}/#{edits_id}") do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+
+        raise StandardError, delete_edits_response.body unless delete_edits_response.success?
+      end
+
+      def self.get_edits(app_id:, token:)
         edits_path = "api/appstore/v1/applications/#{app_id}/edits"
         edits_response = api_client.get(edits_path) do |request|
           request.headers['Authorization'] = "Bearer #{token}"
@@ -55,14 +68,8 @@ module Fastlane
 
         edits_id = edits_response.body[:id]
         etag = edits_response.headers['Etag']
-        return nil if edits_id.nil? || etag.nil? # Do nothing if edits do not exist
 
-        delete_edits_response = api_client.delete("#{edits_path}/#{edits_id}") do |request|
-          request.headers['Authorization'] = "Bearer #{token}"
-          request.headers['If-Match'] = etag
-        end
-
-        raise StandardError, delete_edits_response.body unless delete_edits_response.success?
+        return edits_id, etag
       end
 
       def self.upload_apk(local_apk_path:, app_id:, edit_id:, token:)

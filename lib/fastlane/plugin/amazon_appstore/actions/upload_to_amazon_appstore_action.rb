@@ -22,29 +22,45 @@ module Fastlane
         UI.abort_with_message!("Failed to get token") if token.nil?
 
         if params[:overwrite_upload]
-          UI.message("Deleting existing edits if needed (overwrite_upload: true)...")
+          if params[:overwrite_upload_mode] == "new"
+            UI.message("Deleting existing edits if needed (overwrite_upload: true, overwrite_upload_mode: new)...")
+            begin
+              Helper::AmazonAppstoreHelper.delete_edits_if_exists(
+                app_id: params[:package_name],
+                token: token
+              )
+            rescue StandardError => e
+              UI.error(e.message)
+              UI.abort_with_message!("Failed to delete edits (overwrite_upload: true, overwrite_upload_mode: new)")
+            end
+          elsif params[:overwrite_upload_mode] == "reuse"
+            UI.message("Retrieving active edit (overwrite_upload: true, overwrite_upload_mode: reuse)...")
+            begin
+              edit_id, _ = Helper::AmazonAppstoreHelper.get_edits(
+                app_id: params[:package_name],
+                token: token
+              )
+            rescue StandardError => e
+              UI.error(e.message)
+              UI.abort_with_message!("Failed to get edit_id (overwrite_upload: true, overwrite_upload_mode: new)")
+            end
+            UI.message("No active edit") if edit_id.nil?
+          end
+        end
+
+        if edit_id.nil?
+          UI.message("Creating new edits...")
           begin
-            Helper::AmazonAppstoreHelper.delete_edits_if_exists(
+            edit_id = Helper::AmazonAppstoreHelper.create_edits(
               app_id: params[:package_name],
               token: token
             )
           rescue StandardError => e
             UI.error(e.message)
-            UI.abort_with_message!("Failed to delete edits (overwrite_upload: true)")
+            UI.abort_with_message!("Failed to create edits")
           end
+          UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
         end
-
-        UI.message("Creating new edits...")
-        begin
-          edit_id = Helper::AmazonAppstoreHelper.create_edits(
-            app_id: params[:package_name],
-            token: token
-          )
-        rescue StandardError => e
-          UI.error(e.message)
-          UI.abort_with_message!("Failed to create edits")
-        end
-        UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
 
         apks = []
         apks << params[:apk] if params[:apk]
@@ -66,7 +82,6 @@ module Fastlane
           UI.error(e.message)
           UI.abort_with_message!("Failed to replace APKs")
         end
-
         # Extract version codes and display results
         version_codes = apk_results.map { |result| result[:version_code] }
         apk_results.each_with_index do |result, index|
@@ -176,6 +191,13 @@ module Fastlane
                                        default_value: false,
                                        optional: true,
                                        type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :overwrite_upload_mode,
+                                       env_name: "AMAZON_APPSTORE_OVERWRITE_UPLOAD_MODE",
+                                       description: "Upload strategy. Can be 'new' or 'reuse'",
+                                       default_value: 'new',
+                                       verify_block: proc do |value|
+                                         UI.user_error!("overwrite_upload can only be 'new' or 'reuse'") unless %w(new reuse).include?(value)
+                                       end),
           FastlaneCore::ConfigItem.new(key: :timeout,
                                        env_name: "AMAZON_APPSTORE_TIMEOUT",
                                        description: "Timeout for read, open (in seconds)",
