@@ -32,19 +32,33 @@ module Fastlane
             UI.error(e.message)
             UI.abort_with_message!("Failed to delete edits (overwrite_upload: true)")
           end
+        elsif params[:use_active_edit]
+          UI.message("Retrieving active edit...")
+          begin
+            edit_id, _ = Helper::AmazonAppstoreHelper.get_edits(
+              app_id: params[:package_name],
+              token: token
+            )
+          rescue StandardError => e
+              UI.error(e.message)
+              UI.abort_with_message!("Failed to get edit_id")
+          end
+          UI.message("No active edit") if edit_id.nil?
         end
 
-        UI.message("Creating new edits...")
-        begin
-          edit_id = Helper::AmazonAppstoreHelper.create_edits(
-            app_id: params[:package_name],
-            token: token
-          )
-        rescue StandardError => e
-          UI.error(e.message)
-          UI.abort_with_message!("Failed to create edits")
+        if edit_id.nil?
+          UI.message("Creating new edits...")
+          begin
+            edit_id = Helper::AmazonAppstoreHelper.create_edits(
+              app_id: params[:package_name],
+              token: token
+            )
+          rescue StandardError => e
+            UI.error(e.message)
+            UI.abort_with_message!("Failed to create edits")
+          end
+          UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
         end
-        UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
 
         UI.message("Replacing apk...")
         begin
@@ -155,6 +169,12 @@ module Fastlane
           FastlaneCore::ConfigItem.new(key: :overwrite_upload,
                                        env_name: "AMAZON_APPSTORE_OVERWRITE_UPLOAD",
                                        description: "Whether to allow overwriting an existing upload",
+                                       default_value: false,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :use_active_edit,
+                                       env_name: "AMAZON_APPSTORE_USE_CURRENT_EDIT",
+                                       description: "Use current active edit if it exists, create a new one otherwise",
                                        default_value: false,
                                        optional: true,
                                        type: Boolean),
