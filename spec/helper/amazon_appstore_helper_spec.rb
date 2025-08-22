@@ -163,107 +163,242 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
-  describe '#replace_apk' do
-    let(:local_apk_path) { 'local_apk_path' }
+  describe '#replace_apks' do
+    let(:apk_paths) { ['path/to/apk1.apk', 'path/to/apk2.apk'] }
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
     let(:token) { 'token' }
     let(:apk_id_1) { 'A' }
     let(:apk_id_2) { 'B' }
     let(:apks_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks" }
-    let(:apk_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_1}" }
-    let(:replace_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_1}/replace" }
-    let(:apks_response_body) do
+    let(:existing_apks) do
       [
-        {
-          versionCode: '1000000',
-          id: apk_id_1,
-          name: 'APK1'
-        },
-        {
-          versionCode: '2000000',
-          id: apk_id_2,
-          name: 'APK2'
-        }
+        { versionCode: '1000000', id: apk_id_1, name: 'APK1' },
+        { versionCode: '2000000', id: apk_id_2, name: 'APK2' }
       ]
-    end
-    let(:apk_response_body) do
-      {
-        versionCode: '1000000',
-        id: apk_id_1,
-        name: 'APK1'
-      }
-    end
-    let(:response_error_body) do
-      {
-        error_description: "Client authentication failed",
-        error: "invalid_client"
-      }
     end
 
     before do
       allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
-        double(Faraday::Response, status: 200, body: apks_response_body, success?: true)
+        double(Faraday::Response, status: 200, body: existing_apks, success?: true)
       )
-      allow_any_instance_of(Faraday::Connection).to receive(:get).with(apk_url).and_return(
-        double(Faraday::Response, status: 200, body: apk_response_body, success?: true, headers: { 'Etag' => 'AAAA' })
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with("api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_1}").and_return(
+        double(Faraday::Response, status: 200, body: existing_apks[0], success?: true, headers: { 'Etag' => 'AAAA' })
       )
-      allow_any_instance_of(Faraday::Connection).to receive(:put).with(replace_url).and_return(
-        double(Faraday::Response, status: 204, body: apk_response_body, success?: true)
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with("api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_2}").and_return(
+        double(Faraday::Response, status: 200, body: existing_apks[1], success?: true, headers: { 'Etag' => 'BBBB' })
+      )
+      allow_any_instance_of(Faraday::Connection).to receive(:put).and_return(
+        double(Faraday::Response, status: 204, body: { versionCode: '3000000' }, success?: true)
+      )
+    end
+
+    context 'replace existing APKs' do
+      it 'should return version codes and apk ids' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.replace_apks(
+          apk_paths: apk_paths,
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token
+        )
+        expect(result).to eq([
+                               { version_code: '3000000', apk_id: apk_id_1 },
+                               { version_code: '3000000', apk_id: apk_id_2 }
+                             ])
+      end
+    end
+
+    context 'upload new APKs when more paths than existing' do
+      let(:apk_paths) { ['path/to/apk1.apk', 'path/to/apk2.apk', 'path/to/apk3.apk'] }
+
+      before do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with("#{apks_url}/upload").and_return(
+          double(Faraday::Response, status: 201, body: { versionCode: '4000000', id: 'C' }, success?: true)
+        )
+      end
+
+      it 'should replace existing and upload new APKs' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.replace_apks(
+          apk_paths: apk_paths,
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token
+        )
+        expect(result).to eq([
+                               { version_code: '3000000', apk_id: apk_id_1 },
+                               { version_code: '3000000', apk_id: apk_id_2 },
+                               { version_code: '4000000', apk_id: 'C' }
+                             ])
+      end
+    end
+
+    context 'delete excess APKs when fewer paths than existing' do
+      let(:apk_paths) { ['path/to/apk1.apk'] }
+
+      before do
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with("api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id_2}").and_return(
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        )
+      end
+
+      it 'should replace first APK and delete remaining' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.replace_apks(
+          apk_paths: apk_paths,
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token
+        )
+        expect(result).to eq([
+                               { version_code: '3000000', apk_id: apk_id_1 }
+                             ])
+      end
+    end
+  end
+
+  describe '#upload_apk' do
+    let(:local_apk_path) { 'path/to/new.apk' }
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:token) { 'token' }
+    let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/upload" }
+    let(:upload_response) do
+      { versionCode: '5000000', id: 'NEW_APK_ID' }
+    end
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+        double(Faraday::Response, status: 201, body: upload_response, success?: true)
       )
     end
 
     context 'success' do
-      it 'should return version_code' do
-        expect(Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token)).to eq('1000000')
-      end
-    end
-
-    context 'failed to get apks' do
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
-          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
+      it 'should return version code and apk id' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.upload_apk(
+          local_apk_path: local_apk_path,
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token
         )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect(result).to eq({ version_code: '5000000', apk_id: 'NEW_APK_ID' })
       end
     end
+  end
 
-    context 'failed to get apk_id' do
-      let(:apks_response_body) do
-        [
-          {
-            versionCode: '1000000',
-            name: 'APK1'
+  describe '#delete_apk' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:apk_id) { 'DELETE_APK_ID' }
+    let(:token) { 'token' }
+    let(:apk_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id}" }
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(apk_url).and_return(
+        double(Faraday::Response, status: 200, body: { id: apk_id }, success?: true, headers: { 'Etag' => 'DELETE_ETAG' })
+      )
+      allow_any_instance_of(Faraday::Connection).to receive(:delete).with(apk_url).and_return(
+        double(Faraday::Response, status: 204, body: {}, success?: true)
+      )
+    end
+
+    context 'success' do
+      it 'should delete APK successfully' do
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.delete_apk(
+            app_id: app_id,
+            edit_id: edit_id,
+            apk_id: apk_id,
+            token: token
+          )
+        end.not_to raise_error
+      end
+    end
+  end
+
+  describe '#update_listings_for_multiple_apks' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:token) { 'token' }
+    let(:version_codes) { [100, 200, 300] }
+    let(:skip_upload_changelogs) { false }
+    let(:metadata_path) { './fastlane/metadata/android' }
+    let(:listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings" }
+    let(:listings_response_body) do
+      {
+        listings: {
+          'en-US': {
+            language: 'en-US',
+            title: 'title',
+            recentChanges: nil
           },
-          {
-            versionCode: '2000000',
-            name: 'APK2'
+          'ja-JP': {
+            language: 'ja-JP',
+            title: 'title',
+            recentChanges: nil
           }
-        ]
+        }
+      }
+    end
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
+        double(Faraday::Response, status: 200, body: listings_response_body, success?: true, headers: { 'Etag' => 'MULTI_ETAG' })
+      )
+      allow_any_instance_of(Faraday::Connection).to receive(:put).and_return(
+        double(Faraday::Response, status: 204, body: {}, success?: true)
+      )
+      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog_for_multiple_version_codes).and_return('Test changelog')
+    end
+
+    context 'success' do
+      it 'should update listings for all languages' do
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+            app_id: app_id,
+            edit_id: edit_id,
+            token: token,
+            version_codes: version_codes,
+            skip_upload_changelogs: skip_upload_changelogs,
+            metadata_path: metadata_path
+          )
+        end.not_to raise_error
       end
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(apks_url).and_return(
-          double(Faraday::Response, status: 200, body: apks_response_body, success?: true)
+
+      it 'should call find_changelog_for_multiple_version_codes with correct parameters' do
+        Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
         )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, 'apk_id is nil')
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+          language: 'en-US',
+          version_codes: version_codes,
+          metadata_path: metadata_path
+        )
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+          language: 'ja-JP',
+          version_codes: version_codes,
+          metadata_path: metadata_path
+        )
       end
     end
 
-    context 'failed to get target apk Etag' do
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(apk_url).and_return(
-          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
-        )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
-      end
-    end
+    context 'skip_upload_changelogs is true' do
+      let(:skip_upload_changelogs) { true }
 
-    context 'failed to replace apk' do
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:put).with(replace_url).and_return(
-          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
+      it 'should return early without processing' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
         )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.replace_apk(local_apk_path: local_apk_path, app_id: app_id, edit_id: edit_id, token: token) }.to raise_error(StandardError, response_error_body.to_s)
+        expect(result).to be_nil
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
       end
     end
   end
