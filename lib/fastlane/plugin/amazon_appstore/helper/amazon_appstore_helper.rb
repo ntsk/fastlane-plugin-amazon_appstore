@@ -189,11 +189,15 @@ module Fastlane
         end
         raise StandardError, listings_response.body unless listings_response.success?
 
-        # Use the ETag from the initial request
-        etag = listings_response.headers['Etag']
-
         # Process each language once
         listings_response.body[:listings].each do |lang, listing|
+          # Get fresh ETag for each language update to avoid conflicts
+          etag_response = api_client.get(listings_path) do |request|
+            request.headers['Authorization'] = "Bearer #{token}"
+          end
+          raise StandardError, etag_response.body unless etag_response.success?
+          etag = etag_response.headers['Etag']
+
           # Find the best changelog for multiple version codes
           recent_changes = find_changelog_for_multiple_version_codes(
             language: listing[:language],
