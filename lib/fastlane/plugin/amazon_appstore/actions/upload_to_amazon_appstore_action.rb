@@ -46,27 +46,40 @@ module Fastlane
         end
         UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
 
-        UI.message("Replacing apk...")
+        apks = []
+        apks << params[:apk] if params[:apk]
+        apks += params[:apk_paths] if params[:apk_paths]
+
+        if apks.empty?
+          UI.abort_with_message!("No APK files provided. Please provide either 'apk' or 'apk_paths' parameter")
+        end
+
+        UI.message("Replacing APKs with #{apks.length} file(s)...")
         begin
-          version_code = Helper::AmazonAppstoreHelper.replace_apk(
-            local_apk_path: params[:apk],
+          apk_results = Helper::AmazonAppstoreHelper.replace_apks(
+            apk_paths: apks,
             app_id: params[:package_name],
             edit_id: edit_id,
             token: token
           )
         rescue StandardError => e
           UI.error(e.message)
-          UI.abort_with_message!("Failed to replace apk")
+          UI.abort_with_message!("Failed to replace APKs")
         end
-        UI.abort_with_message!("Failed to get version_code") if version_code.nil?
+
+        # Extract version codes and display results
+        version_codes = apk_results.map { |result| result[:version_code] }
+        apk_results.each_with_index do |result, index|
+          UI.message("Successfully processed APK #{index + 1} with version code: #{result[:version_code]}")
+        end
 
         UI.message("Updating release notes...")
         begin
-          Helper::AmazonAppstoreHelper.update_listings(
+          Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
             app_id: params[:package_name],
             edit_id: edit_id,
             token: token,
-            version_code: version_code,
+            version_codes: version_codes,
             skip_upload_changelogs: params[:skip_upload_changelogs],
             metadata_path: params[:metadata_path]
           )
@@ -132,8 +145,13 @@ module Fastlane
           FastlaneCore::ConfigItem.new(key: :apk,
                                        env_name: "AMAZON_APPSTORE_APK",
                                        description: "The path of the apk file",
-                                       optional: false,
+                                       optional: true,
                                        type: String),
+          FastlaneCore::ConfigItem.new(key: :apk_paths,
+                                       env_name: "AMAZON_APPSTORE_APK_PATHS",
+                                       description: "An array of paths to APK files to upload",
+                                       optional: true,
+                                       type: Array),
           FastlaneCore::ConfigItem.new(key: :skip_upload_changelogs,
                                        env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_CHANGELOGS",
                                        description: "Whether to skip uploading changelogs",
