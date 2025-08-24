@@ -196,6 +196,7 @@ module Fastlane
             request.headers['Authorization'] = "Bearer #{token}"
           end
           raise StandardError, etag_response.body unless etag_response.success?
+
           etag = etag_response.headers['Etag']
 
           # Find the best changelog for multiple version codes
