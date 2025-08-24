@@ -15,8 +15,6 @@ fastlane add_plugin amazon_appstore
 
 Upload the apk to the Amazon Appstore using the [App Submission API](https://developer.amazon.com/docs/app-submission-api/overview.html).
 
-In the future, it would be nice to be able to use it to update store information like `upload_to_play_store`, but for now, it only supports replacing apk and submitting it for review.
-
 ## Usage
 
 Following the [guide](https://developer.amazon.com/docs/app-submission-api/auth.html), you will need to generate `client_id` and `client_secret` to access the console in advance.
@@ -35,7 +33,8 @@ upload_to_amazon_appstore(
 | Key                         | Description                                                                                                                                | Default                     | 
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- | 
 | package_name                | The package name of the application to use                                                                                                 | *                           | 
-| apk                         | Path to the APK file to upload                                                                                                             |                             | 
+| apk                         | Path to the APK file to upload (optional if apk_paths is provided)                                                                         |                             |
+| apk_paths                   | An array of paths to APK files to upload (optional if apk is provided)                                                                     |                             |
 | client_id                   | The client ID you saved                                                                                                                    |                             | 
 | client_secret               | The client secret you saved                                                                                                                |                             | 
 | skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       | 
@@ -48,7 +47,9 @@ upload_to_amazon_appstore(
 ### Changelogs
 
 You can update the release notes by adding a file under `changelogs/` in the same way as [supply](https://docs.fastlane.tools/actions/upload_to_play_store/).
-The filename should exactly match the version code of the APK that it represents. You can also provide default notes that will be used if no files match the version code by adding a default.txt file. 
+The filename should exactly match the version code of the APK that it represents. You can also provide default notes that will be used if no files match the version code by adding a default.txt file.
+
+When uploading multiple APKs with different version codes, the plugin will use the changelog from the highest version code, following the same approach as Fastlane's `upload_to_play_store` action.
 
 ```
 └── fastlane
