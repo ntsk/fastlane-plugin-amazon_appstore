@@ -36,13 +36,13 @@ module Fastlane
           elsif params[:overwrite_upload_mode] == "reuse"
             UI.message("Retrieving active edit (overwrite_upload: true, overwrite_upload_mode: reuse)...")
             begin
-              edit_id, _ = Helper::AmazonAppstoreHelper.get_edits(
+              edit_id, = Helper::AmazonAppstoreHelper.get_edits(
                 app_id: params[:package_name],
                 token: token
               )
             rescue StandardError => e
               UI.error(e.message)
-              UI.abort_with_message!("Failed to get edit_id (overwrite_upload: true, overwrite_upload_mode: new)")
+              UI.abort_with_message!("Failed to get edit_id (overwrite_upload: true, overwrite_upload_mode: reuse)")
             end
             UI.message("No active edit") if edit_id.nil?
           end
