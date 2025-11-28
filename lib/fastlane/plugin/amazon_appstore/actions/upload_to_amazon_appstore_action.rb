@@ -3,7 +3,7 @@ require_relative '../helper/amazon_appstore_helper'
 
 module Fastlane
   module Actions
-    class UploadToAmazonAppstoreAction < Action
+    class UploadToAmazonAppstoreAction < Action # rubocop:disable Metrics/ClassLength
       def self.run(params) # rubocop:disable Metrics/PerceivedComplexity
         Helper::AmazonAppstoreHelper.setup(
           timeout: params[:timeout]
@@ -182,19 +182,17 @@ module Fastlane
             end
 
             images.each do |image_path|
-              begin
-                Helper::AmazonAppstoreHelper.upload_image(
-                  app_id: params[:package_name],
-                  edit_id: edit_id,
-                  language: language,
-                  image_type: image_type,
-                  image_path: image_path,
-                  token: token
-                )
-                UI.message("Uploaded #{image_type} for #{language}: #{File.basename(image_path)}")
-              rescue StandardError => e
-                UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
-              end
+              Helper::AmazonAppstoreHelper.upload_image(
+                app_id: params[:package_name],
+                edit_id: edit_id,
+                language: language,
+                image_type: image_type,
+                image_path: image_path,
+                token: token
+              )
+              UI.message("Uploaded #{image_type} for #{language}: #{File.basename(image_path)}")
+            rescue StandardError => e
+              UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
             end
           end
         end
@@ -227,19 +225,17 @@ module Fastlane
             end
 
             screenshots.each do |screenshot_path|
-              begin
-                Helper::AmazonAppstoreHelper.upload_image(
-                  app_id: params[:package_name],
-                  edit_id: edit_id,
-                  language: language,
-                  image_type: image_type,
-                  image_path: screenshot_path,
-                  token: token
-                )
-                UI.message("Uploaded #{image_type} for #{language}: #{File.basename(screenshot_path)}")
-              rescue StandardError => e
-                UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
-              end
+              Helper::AmazonAppstoreHelper.upload_image(
+                app_id: params[:package_name],
+                edit_id: edit_id,
+                language: language,
+                image_type: image_type,
+                image_path: screenshot_path,
+                token: token
+              )
+              UI.message("Uploaded #{image_type} for #{language}: #{File.basename(screenshot_path)}")
+            rescue StandardError => e
+              UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
             end
           end
         end

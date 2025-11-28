@@ -7,7 +7,7 @@ module Fastlane
   UI = FastlaneCore::UI unless Fastlane.const_defined?(:UI)
 
   module Helper
-    class AmazonAppstoreHelper
+    class AmazonAppstoreHelper # rubocop:disable Metrics/ClassLength
       BASE_URL = 'https://developer.amazon.com'
       AUTH_URL = 'https://api.amazon.com/auth/o2/token'
 
