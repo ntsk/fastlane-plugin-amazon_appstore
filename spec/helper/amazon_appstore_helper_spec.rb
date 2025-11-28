@@ -651,6 +651,52 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#upload_video' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:video_path) { 'path/to/video.mp4' }
+    let(:token) { 'token' }
+    let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos" }
+
+    context 'success' do
+      let(:response_body) { { id: 'video_123' } }
+
+      it 'should return video id' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 201, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.upload_video(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          video_path: video_path,
+          token: token
+        )
+        expect(result).to eq('video_123')
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Upload failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.upload_video(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            video_path: video_path,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }

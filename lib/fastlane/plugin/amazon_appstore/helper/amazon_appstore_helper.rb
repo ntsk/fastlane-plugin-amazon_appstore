@@ -299,6 +299,18 @@ module Fastlane
         nil
       end
 
+      def self.upload_video(app_id:, edit_id:, language:, video_path:, token:)
+        upload_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos"
+        upload_response = api_client.post(upload_path) do |request|
+          request.body = Faraday::UploadIO.new(video_path, 'video/mp4')
+          request.headers['Content-Type'] = 'video/mp4'
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, upload_response.body unless upload_response.success?
+
+        upload_response.body[:id]
+      end
+
       def self.commit_edits(app_id:, edit_id:, token:)
         get_etag_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}"
         etag_response = api_client.get(get_etag_path) do |request|
