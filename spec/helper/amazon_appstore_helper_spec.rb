@@ -600,6 +600,57 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#delete_all_images' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:token) { 'token' }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+
+    context 'success' do
+      it 'should delete all images' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with(images_url).and_return(
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.delete_all_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.not_to raise_error
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Delete failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with(images_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.delete_all_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }

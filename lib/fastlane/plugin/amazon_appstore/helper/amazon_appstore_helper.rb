@@ -282,6 +282,23 @@ module Fastlane
         images_response.body
       end
 
+      def self.delete_all_images(app_id:, edit_id:, language:, image_type:, token:)
+        images_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}"
+        etag_response = api_client.get(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        delete_response = api_client.delete(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, delete_response.body unless delete_response.success?
+
+        nil
+      end
+
       def self.commit_edits(app_id:, edit_id:, token:)
         get_etag_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}"
         etag_response = api_client.get(get_etag_path) do |request|
