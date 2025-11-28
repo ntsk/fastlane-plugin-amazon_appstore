@@ -505,6 +505,55 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#upload_image' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:image_path) { 'path/to/screenshot.png' }
+    let(:token) { 'token' }
+    let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}/upload" }
+
+    context 'success' do
+      let(:response_body) { { id: 'img_123' } }
+
+      it 'should return image id' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.upload_image(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          image_type: image_type,
+          image_path: image_path,
+          token: token
+        )
+        expect(result).to eq('img_123')
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Upload failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.upload_image(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            image_path: image_path,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
