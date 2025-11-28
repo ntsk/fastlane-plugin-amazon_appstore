@@ -311,6 +311,25 @@ module Fastlane
         upload_response.body[:id]
       end
 
+      def self.update_listing_metadata(app_id:, edit_id:, language:, listing_data:, token:)
+        listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}"
+        etag_response = api_client.get(listings_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        update_response = api_client.put(listings_path) do |request|
+          request.body = listing_data.to_json
+          request.headers['Content-Type'] = 'application/json'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, update_response.body unless update_response.success?
+
+        nil
+      end
+
       def self.commit_edits(app_id:, edit_id:, token:)
         get_etag_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}"
         etag_response = api_client.get(get_etag_path) do |request|

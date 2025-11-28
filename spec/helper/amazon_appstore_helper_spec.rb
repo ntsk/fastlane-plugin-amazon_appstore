@@ -697,6 +697,63 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#update_listing_metadata' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:token) { 'token' }
+    let(:listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}" }
+    let(:listing_data) do
+      {
+        title: 'My App',
+        fullDescription: 'Full description',
+        shortDescription: 'Short description'
+      }
+    end
+
+    context 'success' do
+      it 'should update listing metadata' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
+          double(Faraday::Response, status: 200, body: listing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
+          double(Faraday::Response, status: 200, body: listing_data, success?: true)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            listing_data: listing_data,
+            token: token
+          )
+        end.not_to raise_error
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Update failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
+          double(Faraday::Response, status: 200, body: listing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            listing_data: listing_data,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
