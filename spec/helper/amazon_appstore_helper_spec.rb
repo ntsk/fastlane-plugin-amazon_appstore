@@ -754,6 +754,50 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#load_metadata_from_files' do
+    let(:metadata_path) { './spec/fixtures/metadata/android' }
+    let(:language) { 'en-US' }
+
+    before do
+      FileUtils.mkdir_p(File.join(metadata_path, language))
+      File.write(File.join(metadata_path, language, 'title.txt'), 'Test App')
+      File.write(File.join(metadata_path, language, 'short_description.txt'), 'Short desc')
+      File.write(File.join(metadata_path, language, 'full_description.txt'), 'Full description')
+    end
+
+    after do
+      FileUtils.rm_rf('./spec/fixtures')
+    end
+
+    context 'all files exist' do
+      it 'should return metadata hash' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.load_metadata_from_files(
+          metadata_path: metadata_path,
+          language: language
+        )
+        expect(result[:title]).to eq('Test App')
+        expect(result[:shortDescription]).to eq('Short desc')
+        expect(result[:fullDescription]).to eq('Full description')
+      end
+    end
+
+    context 'some files missing' do
+      before do
+        FileUtils.rm(File.join(metadata_path, language, 'short_description.txt'))
+      end
+
+      it 'should return nil for missing fields' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.load_metadata_from_files(
+          metadata_path: metadata_path,
+          language: language
+        )
+        expect(result[:title]).to eq('Test App')
+        expect(result[:shortDescription]).to be_nil
+        expect(result[:fullDescription]).to eq('Full description')
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }

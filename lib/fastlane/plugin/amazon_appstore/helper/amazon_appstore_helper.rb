@@ -330,6 +330,23 @@ module Fastlane
         nil
       end
 
+      def self.load_metadata_from_files(metadata_path:, language:)
+        lang_path = File.join(metadata_path, language)
+        {
+          title: read_metadata_file(lang_path, 'title.txt'),
+          shortDescription: read_metadata_file(lang_path, 'short_description.txt'),
+          fullDescription: read_metadata_file(lang_path, 'full_description.txt')
+        }
+      end
+
+      def self.read_metadata_file(lang_path, filename)
+        path = File.join(lang_path, filename)
+        return nil unless File.exist?(path)
+
+        File.read(path, encoding: 'UTF-8').strip
+      end
+      private_class_method :read_metadata_file
+
       def self.commit_edits(app_id:, edit_id:, token:)
         get_etag_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}"
         etag_response = api_client.get(get_etag_path) do |request|
