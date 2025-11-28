@@ -554,6 +554,52 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#get_images' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:token) { 'token' }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+
+    context 'success' do
+      let(:response_body) { [{ id: 'img_1' }, { id: 'img_2' }] }
+
+      it 'should return images list' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.get_images(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          image_type: image_type,
+          token: token
+        )
+        expect(result).to eq([{ id: 'img_1' }, { id: 'img_2' }])
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Failed to get images' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.get_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
