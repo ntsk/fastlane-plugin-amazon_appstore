@@ -347,6 +347,34 @@ module Fastlane
       end
       private_class_method :read_metadata_file
 
+      IMAGE_TYPE_MAPPING = {
+        'screenshots' => 'phoneScreenshots',
+        'small-icons' => 'icon.png',
+        'large-icons' => 'large_icon.png',
+        'promo-images' => 'featureGraphic.png',
+        'firetv-icons' => 'tvBanner.png',
+        'firetv-backgrounds' => 'tvBackground.png',
+        'firetv-screenshots' => 'tvScreenshots',
+        'firetv-featured-backgrounds' => 'tvFeaturedBackground.png',
+        'firetv-featured-logos' => 'tvFeaturedLogo.png'
+      }.freeze
+
+      def self.find_images_for_type(metadata_path:, language:, image_type:)
+        images_path = File.join(metadata_path, language, 'images')
+        mapping = IMAGE_TYPE_MAPPING[image_type]
+        return [] if mapping.nil?
+
+        target_path = File.join(images_path, mapping)
+
+        if File.directory?(target_path)
+          Dir.glob(File.join(target_path, '*.{png,jpg,jpeg}')).sort
+        elsif File.exist?(target_path)
+          [target_path]
+        else
+          []
+        end
+      end
+
       def self.commit_edits(app_id:, edit_id:, token:)
         get_etag_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}"
         etag_response = api_client.get(get_etag_path) do |request|

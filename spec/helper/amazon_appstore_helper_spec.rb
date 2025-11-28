@@ -798,6 +798,65 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#find_images_for_type' do
+    let(:metadata_path) { './spec/fixtures/metadata/android' }
+    let(:language) { 'en-US' }
+    let(:images_path) { File.join(metadata_path, language, 'images') }
+
+    before do
+      FileUtils.mkdir_p(File.join(images_path, 'phoneScreenshots'))
+    end
+
+    after do
+      FileUtils.rm_rf('./spec/fixtures')
+    end
+
+    context 'screenshots' do
+      before do
+        FileUtils.touch(File.join(images_path, 'phoneScreenshots', '1.png'))
+        FileUtils.touch(File.join(images_path, 'phoneScreenshots', '2.png'))
+      end
+
+      it 'should return screenshot files sorted' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'screenshots'
+        )
+        expect(result.length).to eq(2)
+        expect(result[0]).to end_with('1.png')
+        expect(result[1]).to end_with('2.png')
+      end
+    end
+
+    context 'icon' do
+      before do
+        FileUtils.touch(File.join(images_path, 'icon.png'))
+      end
+
+      it 'should return icon file' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'small-icons'
+        )
+        expect(result.length).to eq(1)
+        expect(result[0]).to end_with('icon.png')
+      end
+    end
+
+    context 'no images found' do
+      it 'should return empty array' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'promo-images'
+        )
+        expect(result).to eq([])
+      end
+    end
+  end
+
   describe '#commit_edits' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
