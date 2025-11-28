@@ -62,30 +62,33 @@ module Fastlane
           UI.abort_with_message!("Failed to get edit_id") if edit_id.nil?
         end
 
-        apks = []
-        apks << params[:apk] if params[:apk]
-        apks += params[:apk_paths] if params[:apk_paths]
+        version_codes = []
 
-        if apks.empty?
-          UI.abort_with_message!("No APK files provided. Please provide either 'apk' or 'apk_paths' parameter")
-        end
+        unless params[:skip_upload_apk]
+          apks = []
+          apks << params[:apk] if params[:apk]
+          apks += params[:apk_paths] if params[:apk_paths]
 
-        UI.message("Replacing APKs with #{apks.length} file(s)...")
-        begin
-          apk_results = Helper::AmazonAppstoreHelper.replace_apks(
-            apk_paths: apks,
-            app_id: params[:package_name],
-            edit_id: edit_id,
-            token: token
-          )
-        rescue StandardError => e
-          UI.error(e.message)
-          UI.abort_with_message!("Failed to replace APKs")
-        end
-        # Extract version codes and display results
-        version_codes = apk_results.map { |result| result[:version_code] }
-        apk_results.each_with_index do |result, index|
-          UI.message("Successfully processed APK #{index + 1} with version code: #{result[:version_code]}")
+          if apks.empty?
+            UI.abort_with_message!("No APK files provided. Please provide either 'apk' or 'apk_paths' parameter")
+          end
+
+          UI.message("Replacing APKs with #{apks.length} file(s)...")
+          begin
+            apk_results = Helper::AmazonAppstoreHelper.replace_apks(
+              apk_paths: apks,
+              app_id: params[:package_name],
+              edit_id: edit_id,
+              token: token
+            )
+          rescue StandardError => e
+            UI.error(e.message)
+            UI.abort_with_message!("Failed to replace APKs")
+          end
+          version_codes = apk_results.map { |result| result[:version_code] }
+          apk_results.each_with_index do |result, index|
+            UI.message("Successfully processed APK #{index + 1} with version code: #{result[:version_code]}")
+          end
         end
 
         UI.message("Updating release notes...")
@@ -102,6 +105,10 @@ module Fastlane
           UI.error(e.message)
           UI.abort_with_message!("Failed to update listings")
         end
+
+        upload_metadata(params, edit_id, token) unless params[:skip_upload_metadata]
+        upload_images(params, edit_id, token) unless params[:skip_upload_images]
+        upload_screenshots(params, edit_id, token) unless params[:skip_upload_screenshots]
 
         if params[:changes_not_sent_for_review]
           UI.success('Successfully finished the upload to Amazon Appstore')
@@ -121,6 +128,128 @@ module Fastlane
         end
 
         UI.success('Successfully finished the upload to Amazon Appstore')
+      end
+
+      def self.upload_metadata(params, edit_id, token)
+        UI.message("Uploading metadata...")
+        languages = available_languages(params[:metadata_path])
+        languages.each do |language|
+          metadata = Helper::AmazonAppstoreHelper.load_metadata_from_files(
+            metadata_path: params[:metadata_path],
+            language: language
+          )
+          next if metadata.values.all?(&:nil?)
+
+          begin
+            Helper::AmazonAppstoreHelper.update_listing_metadata(
+              app_id: params[:package_name],
+              edit_id: edit_id,
+              language: language,
+              listing_data: metadata,
+              token: token
+            )
+            UI.message("Updated metadata for #{language}")
+          rescue StandardError => e
+            UI.error("Failed to update metadata for #{language}: #{e.message}")
+          end
+        end
+      end
+
+      def self.upload_images(params, edit_id, token)
+        UI.message("Uploading images...")
+        image_types = %w[small-icons large-icons promo-images firetv-icons firetv-backgrounds]
+        languages = available_languages(params[:metadata_path])
+
+        languages.each do |language|
+          image_types.each do |image_type|
+            images = Helper::AmazonAppstoreHelper.find_images_for_type(
+              metadata_path: params[:metadata_path],
+              language: language,
+              image_type: image_type
+            )
+            next if images.empty?
+
+            begin
+              Helper::AmazonAppstoreHelper.delete_all_images(
+                app_id: params[:package_name],
+                edit_id: edit_id,
+                language: language,
+                image_type: image_type,
+                token: token
+              )
+            rescue StandardError => e
+              UI.message("No existing #{image_type} to delete for #{language}")
+            end
+
+            images.each do |image_path|
+              begin
+                Helper::AmazonAppstoreHelper.upload_image(
+                  app_id: params[:package_name],
+                  edit_id: edit_id,
+                  language: language,
+                  image_type: image_type,
+                  image_path: image_path,
+                  token: token
+                )
+                UI.message("Uploaded #{image_type} for #{language}: #{File.basename(image_path)}")
+              rescue StandardError => e
+                UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
+              end
+            end
+          end
+        end
+      end
+
+      def self.upload_screenshots(params, edit_id, token)
+        UI.message("Uploading screenshots...")
+        screenshot_types = %w[screenshots firetv-screenshots]
+        languages = available_languages(params[:metadata_path])
+
+        languages.each do |language|
+          screenshot_types.each do |image_type|
+            screenshots = Helper::AmazonAppstoreHelper.find_images_for_type(
+              metadata_path: params[:metadata_path],
+              language: language,
+              image_type: image_type
+            )
+            next if screenshots.empty?
+
+            begin
+              Helper::AmazonAppstoreHelper.delete_all_images(
+                app_id: params[:package_name],
+                edit_id: edit_id,
+                language: language,
+                image_type: image_type,
+                token: token
+              )
+            rescue StandardError => e
+              UI.message("No existing #{image_type} to delete for #{language}")
+            end
+
+            screenshots.each do |screenshot_path|
+              begin
+                Helper::AmazonAppstoreHelper.upload_image(
+                  app_id: params[:package_name],
+                  edit_id: edit_id,
+                  language: language,
+                  image_type: image_type,
+                  image_path: screenshot_path,
+                  token: token
+                )
+                UI.message("Uploaded #{image_type} for #{language}: #{File.basename(screenshot_path)}")
+              rescue StandardError => e
+                UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
+              end
+            end
+          end
+        end
+      end
+
+      def self.available_languages(metadata_path)
+        return [] unless File.directory?(metadata_path)
+
+        Dir.entries(metadata_path)
+           .select { |entry| File.directory?(File.join(metadata_path, entry)) && !entry.start_with?('.') }
       end
 
       def self.description
@@ -167,10 +296,40 @@ module Fastlane
                                        description: "An array of paths to APK files to upload",
                                        optional: true,
                                        type: Array),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_apk,
+                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_APK",
+                                       description: "Whether to skip uploading APK",
+                                       default_value: false,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_metadata,
+                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_METADATA",
+                                       description: "Whether to skip uploading metadata (title, descriptions)",
+                                       default_value: false,
+                                       optional: true,
+                                       type: Boolean),
           FastlaneCore::ConfigItem.new(key: :skip_upload_changelogs,
                                        env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_CHANGELOGS",
                                        description: "Whether to skip uploading changelogs",
                                        default_value: false,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_images,
+                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_IMAGES",
+                                       description: "Whether to skip uploading images (icons, promo images)",
+                                       default_value: true,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_screenshots,
+                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_SCREENSHOTS",
+                                       description: "Whether to skip uploading screenshots",
+                                       default_value: true,
+                                       optional: true,
+                                       type: Boolean),
+          FastlaneCore::ConfigItem.new(key: :skip_upload_videos,
+                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_VIDEOS",
+                                       description: "Whether to skip uploading videos",
+                                       default_value: true,
                                        optional: true,
                                        type: Boolean),
           FastlaneCore::ConfigItem.new(key: :metadata_path,
