@@ -320,6 +320,189 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
           expect { Fastlane::Actions::UploadToAmazonAppstoreAction.run(params) }.to raise_error(FastlaneCore::Interface::FastlaneCommonException, "No APK files provided. Please provide either 'apk' or 'apk_paths' parameter")
         end
       end
+
+      context 'with skip_upload_apk' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            skip_upload_apk: true,
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: false,
+            timeout: 300
+          }
+        end
+
+        it 'should not call replace_apks' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:replace_apks)
+        end
+
+        it 'should call UI.success' do
+          allow(Fastlane::UI).to receive(:success).and_return(true)
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::UI).to have_received(:success).once
+        end
+      end
+    end
+
+    context 'skip_upload_metadata' do
+      let(:params) do
+        {
+          client_id: 'client_id',
+          client_secret: 'client_secret',
+          package_name: 'package_name',
+          apk: 'apk',
+          skip_upload_metadata: false,
+          skip_upload_changelogs: false,
+          metadata_path: './fastlane/metadata/android',
+          changes_not_sent_for_review: false,
+          overwrite_upload: false,
+          timeout: 300
+        }
+      end
+
+      before do
+        allow(Fastlane::Actions::UploadToAmazonAppstoreAction).to receive(:available_languages).and_return(['en-US'])
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:load_metadata_from_files).and_return({ title: 'Test App' })
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_listing_metadata).and_return(nil)
+      end
+
+      it 'should call update_listing_metadata when skip_upload_metadata is false' do
+        Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:update_listing_metadata)
+      end
+
+      context 'when skip_upload_metadata is true' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            apk: 'apk',
+            skip_upload_metadata: true,
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: false,
+            timeout: 300
+          }
+        end
+
+        it 'should not call update_listing_metadata' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:update_listing_metadata)
+        end
+      end
+    end
+
+    context 'skip_upload_images' do
+      let(:params) do
+        {
+          client_id: 'client_id',
+          client_secret: 'client_secret',
+          package_name: 'package_name',
+          apk: 'apk',
+          skip_upload_images: false,
+          skip_upload_screenshots: true,
+          skip_upload_changelogs: false,
+          metadata_path: './fastlane/metadata/android',
+          changes_not_sent_for_review: false,
+          overwrite_upload: false,
+          timeout: 300
+        }
+      end
+
+      before do
+        allow(Fastlane::Actions::UploadToAmazonAppstoreAction).to receive(:available_languages).and_return(['en-US'])
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_images_for_type).and_return(['/path/to/icon.png'])
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:delete_all_images).and_return(nil)
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:upload_image).and_return(nil)
+      end
+
+      it 'should call upload_image when skip_upload_images is false' do
+        Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:upload_image).at_least(:once)
+      end
+
+      context 'when skip_upload_images is true' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            apk: 'apk',
+            skip_upload_images: true,
+            skip_upload_screenshots: true,
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: false,
+            timeout: 300
+          }
+        end
+
+        it 'should not call upload_image for images' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:upload_image)
+        end
+      end
+    end
+
+    context 'skip_upload_screenshots' do
+      let(:params) do
+        {
+          client_id: 'client_id',
+          client_secret: 'client_secret',
+          package_name: 'package_name',
+          apk: 'apk',
+          skip_upload_images: true,
+          skip_upload_screenshots: false,
+          skip_upload_changelogs: false,
+          metadata_path: './fastlane/metadata/android',
+          changes_not_sent_for_review: false,
+          overwrite_upload: false,
+          timeout: 300
+        }
+      end
+
+      before do
+        allow(Fastlane::Actions::UploadToAmazonAppstoreAction).to receive(:available_languages).and_return(['en-US'])
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_images_for_type).and_return(['/path/to/screenshot.png'])
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:delete_all_images).and_return(nil)
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:upload_image).and_return(nil)
+      end
+
+      it 'should call upload_image when skip_upload_screenshots is false' do
+        Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:upload_image).at_least(:once)
+      end
+
+      context 'when skip_upload_screenshots is true' do
+        let(:params) do
+          {
+            client_id: 'client_id',
+            client_secret: 'client_secret',
+            package_name: 'package_name',
+            apk: 'apk',
+            skip_upload_images: true,
+            skip_upload_screenshots: true,
+            skip_upload_changelogs: false,
+            metadata_path: './fastlane/metadata/android',
+            changes_not_sent_for_review: false,
+            overwrite_upload: false,
+            timeout: 300
+          }
+        end
+
+        it 'should not call upload_image for screenshots' do
+          Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
+          expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:upload_image)
+        end
+      end
     end
   end
 
@@ -349,7 +532,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
 
   describe '#available_options' do
     it 'should return options' do
-      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(11)
+      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(16)
     end
   end
 

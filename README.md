@@ -30,19 +30,24 @@ upload_to_amazon_appstore(
 ```
 
 ### Parameters
-| Key                         | Description                                                                                                                                | Default                     | 
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- | 
-| package_name                | The package name of the application to use                                                                                                 | *                           | 
+| Key                         | Description                                                                                                                                | Default                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| package_name                | The package name of the application to use                                                                                                 | *                           |
 | apk                         | Path to the APK file to upload (optional if apk_paths is provided)                                                                         |                             |
 | apk_paths                   | An array of paths to APK files to upload (optional if apk is provided)                                                                     |                             |
-| client_id                   | The client ID you saved                                                                                                                    |                             | 
-| client_secret               | The client secret you saved                                                                                                                |                             | 
-| skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       | 
-| metadata_path               | Path to the directory containing the metadata files                                                                                        | ./fastlane/metadata/android | 
-| changes_not_sent_for_review | Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI | false                       | 
+| client_id                   | The client ID you saved                                                                                                                    |                             |
+| client_secret               | The client secret you saved                                                                                                                |                             |
+| skip_upload_apk             | Whether to skip uploading APK                                                                                                              | false                       |
+| skip_upload_metadata        | Whether to skip uploading metadata (title, descriptions)                                                                                   | false                       |
+| skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       |
+| skip_upload_images          | Whether to skip uploading images (icons, promo images)                                                                                     | true                        |
+| skip_upload_screenshots     | Whether to skip uploading screenshots                                                                                                      | true                        |
+| skip_upload_videos          | Whether to skip uploading videos                                                                                                           | true                        |
+| metadata_path               | Path to the directory containing the metadata files                                                                                        | ./fastlane/metadata/android |
+| changes_not_sent_for_review | Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI | false                       |
 | overwrite_upload            | Whether to allow overwriting an existing upload                                                                                            | false                       |
 | overwrite_upload_mode       | Upload strategy when overwrite_upload is true. Can be 'new' (delete existing edit and create new) or 'reuse' (reuse existing edit)         | new                         |
-| timeout                     | Timeout for read, open (in seconds)                                                                                                        | 300                         | 
+| timeout                     | Timeout for read, open (in seconds)                                                                                                        | 300                         |
 * = default value is dependent on the user's system
 
 ### Changelogs
@@ -69,6 +74,74 @@ When uploading multiple APKs with different version codes, the plugin will use t
 
 One difference from Google Play is that the Amazon Appstore always requires release notes to be entered before review.
 For this reason, `-` will be entered by default if the corresponding changelogs file is not found, or if the `skip_upload_changelogs` parameter is used.
+
+### Metadata (Title and Descriptions)
+
+You can update store listing metadata (title, short description, full description) by adding text files in the metadata directory. The plugin uses the same structure as Google Play's [supply](https://docs.fastlane.tools/actions/upload_to_play_store/).
+
+```
+└── fastlane
+    └── metadata
+        └── android
+            ├── en-US
+            │   ├── title.txt
+            │   ├── short_description.txt
+            │   └── full_description.txt
+            └── ja-JP
+                ├── title.txt
+                ├── short_description.txt
+                └── full_description.txt
+```
+
+### Images and Screenshots
+
+You can upload images (icons, promo images) and screenshots by placing them in the `images/` directory. The plugin supports the Google Play metadata structure and maps it to Amazon Appstore image types.
+
+```
+└── fastlane
+    └── metadata
+        └── android
+            └── en-US
+                └── images
+                    ├── icon.png              → small-icons (114x114)
+                    ├── large_icon.png        → large-icons (512x512)
+                    ├── featureGraphic.png    → promo-images (1024x500)
+                    ├── phoneScreenshots/     → screenshots
+                    │   ├── 1.png
+                    │   └── 2.png
+                    ├── tvBanner.png          → firetv-icons
+                    ├── tvBackground.png      → firetv-backgrounds
+                    └── tvScreenshots/        → firetv-screenshots
+                        ├── 1.png
+                        └── 2.png
+```
+
+To enable image uploads, set `skip_upload_images: false` and/or `skip_upload_screenshots: false`:
+
+```ruby
+upload_to_amazon_appstore(
+  apk: "app/build/outputs/apk/release/app-release.apk",
+  client_id: <YOUR_CLIENT_ID>,
+  client_secret: <YOUR_CLIENT_SECRET>,
+  skip_upload_images: false,
+  skip_upload_screenshots: false
+)
+```
+
+### Metadata-only Upload
+
+You can upload only metadata (without APK) by using `skip_upload_apk: true`:
+
+```ruby
+upload_to_amazon_appstore(
+  client_id: <YOUR_CLIENT_ID>,
+  client_secret: <YOUR_CLIENT_SECRET>,
+  skip_upload_apk: true,
+  skip_upload_metadata: false,
+  skip_upload_images: false,
+  skip_upload_screenshots: false
+)
+```
 
 ## Run tests for this plugin
 
