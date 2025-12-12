@@ -28,7 +28,7 @@ jobs:
     - name: Run tests
       run: bundle exec rake
     - name: Upload artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: test-results-${{ matrix.ruby }}
         path: test-results
