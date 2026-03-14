@@ -42,7 +42,6 @@ upload_to_amazon_appstore(
 | skip_upload_changelogs      | Whether to skip uploading changelogs                                                                                                       | false                       |
 | skip_upload_images          | Whether to skip uploading images (icons, promo images)                                                                                     | true                        |
 | skip_upload_screenshots     | Whether to skip uploading screenshots                                                                                                      | true                        |
-| skip_upload_videos          | Whether to skip uploading videos                                                                                                           | true                        |
 | metadata_path               | Path to the directory containing the metadata files                                                                                        | ./fastlane/metadata/android |
 | changes_not_sent_for_review | Indicates that the changes in this edit will not be reviewed until they are explicitly sent for review from the Amazon Appstore Console UI | false                       |
 | overwrite_upload            | Whether to allow overwriting an existing upload                                                                                            | false                       |
