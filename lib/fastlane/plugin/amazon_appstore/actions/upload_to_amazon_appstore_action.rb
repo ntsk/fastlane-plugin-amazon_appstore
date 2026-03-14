@@ -3,7 +3,7 @@ require_relative '../helper/amazon_appstore_helper'
 
 module Fastlane
   module Actions
-    class UploadToAmazonAppstoreAction < Action # rubocop:disable Metrics/ClassLength
+    class UploadToAmazonAppstoreAction < Action
       def self.run(params) # rubocop:disable Metrics/PerceivedComplexity
         Helper::AmazonAppstoreHelper.setup(
           timeout: params[:timeout]
