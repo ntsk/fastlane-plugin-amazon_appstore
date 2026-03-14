@@ -385,6 +385,23 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       end
     end
 
+    context 'version_codes is empty' do
+      let(:version_codes) { [] }
+
+      it 'should return early without processing' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
+        expect(result).to be_nil
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
+      end
+    end
+
     context 'skip_upload_changelogs is true' do
       let(:skip_upload_changelogs) { true }
 

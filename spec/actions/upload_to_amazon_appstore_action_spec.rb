@@ -7,6 +7,9 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
         package_name: 'package_name',
         apk: 'apk',
         skip_upload_changelogs: false,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
         metadata_path: './fastlane/metadata/android',
         changes_not_sent_for_review: false,
         overwrite_upload: false,
@@ -532,7 +535,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
 
   describe '#available_options' do
     it 'should return options' do
-      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(16)
+      expect(Fastlane::Actions::UploadToAmazonAppstoreAction.available_options.size).to eq(15)
     end
   end
 
