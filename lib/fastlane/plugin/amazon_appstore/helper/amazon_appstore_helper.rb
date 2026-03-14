@@ -262,12 +262,19 @@ module Fastlane
       end
 
       def self.upload_image(app_id:, edit_id:, language:, image_type:, image_path:, token:)
-        content_type = image_path.match?(/\.png$/i) ? 'image/png' : 'image/jpeg'
-        upload_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}/upload"
-        upload_response = api_client.post(upload_path) do |request|
-          request.body = Faraday::UploadIO.new(image_path, content_type)
-          request.headers['Content-Type'] = content_type
+        images_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}"
+        etag_response = api_client.get(images_path) do |request|
           request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        upload_path = "#{images_path}/upload"
+        upload_response = api_client.post(upload_path) do |request|
+          request.body = Faraday::UploadIO.new(image_path, 'application/octet-stream')
+          request.headers['Content-Type'] = 'application/octet-stream'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
         end
         raise StandardError, upload_response.body unless upload_response.success?
 
@@ -302,11 +309,18 @@ module Fastlane
       end
 
       def self.upload_video(app_id:, edit_id:, language:, video_path:, token:)
-        upload_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos"
-        upload_response = api_client.post(upload_path) do |request|
-          request.body = Faraday::UploadIO.new(video_path, 'video/mp4')
-          request.headers['Content-Type'] = 'video/mp4'
+        videos_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos"
+        etag_response = api_client.get(videos_path) do |request|
           request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        upload_response = api_client.post(videos_path) do |request|
+          request.body = Faraday::UploadIO.new(video_path, 'application/octet-stream')
+          request.headers['Content-Type'] = 'application/octet-stream'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
         end
         raise StandardError, upload_response.body unless upload_response.success?
 
@@ -321,8 +335,11 @@ module Fastlane
         raise StandardError, etag_response.body unless etag_response.success?
 
         etag = etag_response.headers['Etag']
+        existing_data = etag_response.body
+        merged_data = existing_data.merge(listing_data.compact)
+
         update_response = api_client.put(listings_path) do |request|
-          request.body = listing_data.to_json
+          request.body = merged_data.to_json
           request.headers['Content-Type'] = 'application/json'
           request.headers['Authorization'] = "Bearer #{token}"
           request.headers['If-Match'] = etag
