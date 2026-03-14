@@ -529,7 +529,14 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:image_type) { 'screenshots' }
     let(:image_path) { 'path/to/screenshot.png' }
     let(:token) { 'token' }
-    let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}/upload" }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+    let(:upload_url) { "#{images_url}/upload" }
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+        double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'IMG_ETAG' })
+      )
+    end
 
     context 'success' do
       let(:response_body) { { id: 'img_123' } }
@@ -674,13 +681,19 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:language) { 'en-US' }
     let(:video_path) { 'path/to/video.mp4' }
     let(:token) { 'token' }
-    let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos" }
+    let(:videos_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos" }
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(videos_url).and_return(
+        double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'VID_ETAG' })
+      )
+    end
 
     context 'success' do
       let(:response_body) { { id: 'video_123' } }
 
       it 'should return video id' do
-        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(videos_url).and_return(
           double(Faraday::Response, status: 201, body: response_body, success?: true)
         )
         result = Fastlane::Helper::AmazonAppstoreHelper.upload_video(
@@ -698,7 +711,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       let(:response_error_body) { { message: 'Upload failed' } }
 
       it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(videos_url).and_return(
           double(Faraday::Response, status: 400, body: response_error_body, success?: false)
         )
         expect do
@@ -720,6 +733,17 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:language) { 'en-US' }
     let(:token) { 'token' }
     let(:listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}" }
+    let(:existing_data) do
+      {
+        language: 'en-US',
+        title: 'Old Title',
+        fullDescription: 'Old full description',
+        shortDescription: 'Old short description',
+        recentChanges: 'Some changes',
+        featureBullets: ['bullet1'],
+        keywords: ['keyword1']
+      }
+    end
     let(:listing_data) do
       {
         title: 'My App',
@@ -728,13 +752,16 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       }
     end
 
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
+        double(Faraday::Response, status: 200, body: existing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
+      )
+    end
+
     context 'success' do
       it 'should update listing metadata' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
-          double(Faraday::Response, status: 200, body: listing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
-        )
         allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
-          double(Faraday::Response, status: 200, body: listing_data, success?: true)
+          double(Faraday::Response, status: 200, body: existing_data.merge(listing_data), success?: true)
         )
         expect do
           Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
@@ -746,15 +773,37 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           )
         end.not_to raise_error
       end
+
+      it 'should merge with existing data preserving unmodified fields' do
+        put_body = nil
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url) do |_, &block|
+          request = double('request', headers: {})
+          allow(request).to receive(:body=) { |v| put_body = v }
+          allow(request).to receive(:headers).and_return({})
+          block.call(request)
+          double(Faraday::Response, status: 200, body: {}, success?: true)
+        end
+
+        Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          listing_data: listing_data,
+          token: token
+        )
+
+        parsed = JSON.parse(put_body, symbolize_names: true)
+        expect(parsed[:title]).to eq('My App')
+        expect(parsed[:featureBullets]).to eq(['bullet1'])
+        expect(parsed[:keywords]).to eq(['keyword1'])
+        expect(parsed[:recentChanges]).to eq('Some changes')
+      end
     end
 
     context 'failure' do
       let(:response_error_body) { { message: 'Update failed' } }
 
       it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
-          double(Faraday::Response, status: 200, body: listing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
-        )
         allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
           double(Faraday::Response, status: 400, body: response_error_body, success?: false)
         )
