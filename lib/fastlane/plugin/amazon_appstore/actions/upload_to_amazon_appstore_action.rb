@@ -157,7 +157,15 @@ module Fastlane
 
       def self.upload_images(params, edit_id, token)
         UI.message("Uploading images...")
-        image_types = %w[small-icons large-icons promo-images firetv-icons firetv-backgrounds]
+        upload_image_assets(params, edit_id, token, %w[small-icons large-icons promo-images firetv-icons firetv-backgrounds])
+      end
+
+      def self.upload_screenshots(params, edit_id, token)
+        UI.message("Uploading screenshots...")
+        upload_image_assets(params, edit_id, token, %w[screenshots firetv-screenshots])
+      end
+
+      def self.upload_image_assets(params, edit_id, token, image_types)
         languages = available_languages(params[:metadata_path])
 
         languages.each do |language|
@@ -178,7 +186,7 @@ module Fastlane
                 token: token
               )
             rescue StandardError => e
-              UI.message("No existing #{image_type} to delete for #{language}")
+              UI.message("Failed to delete existing #{image_type} for #{language}: #{e.message}")
             end
 
             images.each do |image_path|
@@ -191,49 +199,6 @@ module Fastlane
                 token: token
               )
               UI.message("Uploaded #{image_type} for #{language}: #{File.basename(image_path)}")
-            rescue StandardError => e
-              UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
-            end
-          end
-        end
-      end
-
-      def self.upload_screenshots(params, edit_id, token)
-        UI.message("Uploading screenshots...")
-        screenshot_types = %w[screenshots firetv-screenshots]
-        languages = available_languages(params[:metadata_path])
-
-        languages.each do |language|
-          screenshot_types.each do |image_type|
-            screenshots = Helper::AmazonAppstoreHelper.find_images_for_type(
-              metadata_path: params[:metadata_path],
-              language: language,
-              image_type: image_type
-            )
-            next if screenshots.empty?
-
-            begin
-              Helper::AmazonAppstoreHelper.delete_all_images(
-                app_id: params[:package_name],
-                edit_id: edit_id,
-                language: language,
-                image_type: image_type,
-                token: token
-              )
-            rescue StandardError => e
-              UI.message("No existing #{image_type} to delete for #{language}")
-            end
-
-            screenshots.each do |screenshot_path|
-              Helper::AmazonAppstoreHelper.upload_image(
-                app_id: params[:package_name],
-                edit_id: edit_id,
-                language: language,
-                image_type: image_type,
-                image_path: screenshot_path,
-                token: token
-              )
-              UI.message("Uploaded #{image_type} for #{language}: #{File.basename(screenshot_path)}")
             rescue StandardError => e
               UI.error("Failed to upload #{image_type} for #{language}: #{e.message}")
             end
@@ -319,12 +284,6 @@ module Fastlane
           FastlaneCore::ConfigItem.new(key: :skip_upload_screenshots,
                                        env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_SCREENSHOTS",
                                        description: "Whether to skip uploading screenshots",
-                                       default_value: true,
-                                       optional: true,
-                                       type: Boolean),
-          FastlaneCore::ConfigItem.new(key: :skip_upload_videos,
-                                       env_name: "AMAZON_APPSTORE_SKIP_UPLOAD_VIDEOS",
-                                       description: "Whether to skip uploading videos",
                                        default_value: true,
                                        optional: true,
                                        type: Boolean),
