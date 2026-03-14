@@ -186,6 +186,7 @@ module Fastlane
 
       def self.update_listings_for_multiple_apks(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
         return if skip_upload_changelogs
+        return if version_codes.empty?
 
         UI.message("Updating listings for #{version_codes.length} version codes: #{version_codes.join(', ')}")
 
@@ -261,10 +262,11 @@ module Fastlane
       end
 
       def self.upload_image(app_id:, edit_id:, language:, image_type:, image_path:, token:)
+        content_type = image_path.match?(/\.png$/i) ? 'image/png' : 'image/jpeg'
         upload_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}/upload"
         upload_response = api_client.post(upload_path) do |request|
-          request.body = Faraday::UploadIO.new(image_path, 'image/png')
-          request.headers['Content-Type'] = 'image/png'
+          request.body = Faraday::UploadIO.new(image_path, content_type)
+          request.headers['Content-Type'] = content_type
           request.headers['Authorization'] = "Bearer #{token}"
         end
         raise StandardError, upload_response.body unless upload_response.success?
