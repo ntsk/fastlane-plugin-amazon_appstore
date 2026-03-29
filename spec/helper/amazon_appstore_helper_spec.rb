@@ -385,6 +385,23 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       end
     end
 
+    context 'version_codes is empty' do
+      let(:version_codes) { [] }
+
+      it 'should return early without processing' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
+        expect(result).to be_nil
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
+      end
+    end
+
     context 'skip_upload_changelogs is true' do
       let(:skip_upload_changelogs) { true }
 
@@ -501,6 +518,407 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           double(Faraday::Response, status: 401, body: response_error_body, success?: false)
         )
         expect { Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#upload_image' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:image_path) { 'path/to/screenshot.png' }
+    let(:token) { 'token' }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+    let(:upload_url) { "#{images_url}/upload" }
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+        double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'IMG_ETAG' })
+      )
+    end
+
+    context 'success' do
+      let(:response_body) { { id: 'img_123' } }
+
+      it 'should return image id' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.upload_image(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          image_type: image_type,
+          image_path: image_path,
+          token: token
+        )
+        expect(result).to eq('img_123')
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Upload failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.upload_image(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            image_path: image_path,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#get_images' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:token) { 'token' }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+
+    context 'success' do
+      let(:response_body) { [{ id: 'img_1' }, { id: 'img_2' }] }
+
+      it 'should return images list' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.get_images(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          image_type: image_type,
+          token: token
+        )
+        expect(result).to eq([{ id: 'img_1' }, { id: 'img_2' }])
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Failed to get images' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.get_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#delete_all_images' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:image_type) { 'screenshots' }
+    let(:token) { 'token' }
+    let(:images_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}" }
+
+    context 'success' do
+      it 'should delete all images' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with(images_url).and_return(
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.delete_all_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.not_to raise_error
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Delete failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:get).with(images_url).and_return(
+          double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'ETAG123' })
+        )
+        allow_any_instance_of(Faraday::Connection).to receive(:delete).with(images_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.delete_all_images(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            image_type: image_type,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#upload_video' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:video_path) { 'path/to/video.mp4' }
+    let(:token) { 'token' }
+    let(:videos_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos" }
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(videos_url).and_return(
+        double(Faraday::Response, status: 200, body: [], success?: true, headers: { 'Etag' => 'VID_ETAG' })
+      )
+    end
+
+    context 'success' do
+      let(:response_body) { { id: 'video_123' } }
+
+      it 'should return video id' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(videos_url).and_return(
+          double(Faraday::Response, status: 201, body: response_body, success?: true)
+        )
+        result = Fastlane::Helper::AmazonAppstoreHelper.upload_video(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          video_path: video_path,
+          token: token
+        )
+        expect(result).to eq('video_123')
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Upload failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:post).with(videos_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.upload_video(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            video_path: video_path,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#update_listing_metadata' do
+    let(:app_id) { 'app_id' }
+    let(:edit_id) { 'edit_id' }
+    let(:language) { 'en-US' }
+    let(:token) { 'token' }
+    let(:listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}" }
+    let(:existing_data) do
+      {
+        language: 'en-US',
+        title: 'Old Title',
+        fullDescription: 'Old full description',
+        shortDescription: 'Old short description',
+        recentChanges: 'Some changes',
+        featureBullets: ['bullet1'],
+        keywords: ['keyword1']
+      }
+    end
+    let(:listing_data) do
+      {
+        title: 'My App',
+        fullDescription: 'Full description',
+        shortDescription: 'Short description'
+      }
+    end
+
+    before do
+      allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
+        double(Faraday::Response, status: 200, body: existing_data, success?: true, headers: { 'Etag' => 'ETAG123' })
+      )
+    end
+
+    context 'success' do
+      it 'should update listing metadata' do
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
+          double(Faraday::Response, status: 200, body: existing_data.merge(listing_data), success?: true)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            listing_data: listing_data,
+            token: token
+          )
+        end.not_to raise_error
+      end
+
+      it 'should merge with existing data preserving unmodified fields' do
+        put_body = nil
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url) do |_, &block|
+          request = double('request', headers: {})
+          allow(request).to receive(:body=) { |v| put_body = v }
+          allow(request).to receive(:headers).and_return({})
+          block.call(request)
+          double(Faraday::Response, status: 200, body: {}, success?: true)
+        end
+
+        Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+          app_id: app_id,
+          edit_id: edit_id,
+          language: language,
+          listing_data: listing_data,
+          token: token
+        )
+
+        parsed = JSON.parse(put_body, symbolize_names: true)
+        expect(parsed[:title]).to eq('My App')
+        expect(parsed[:featureBullets]).to eq(['bullet1'])
+        expect(parsed[:keywords]).to eq(['keyword1'])
+        expect(parsed[:recentChanges]).to eq('Some changes')
+      end
+    end
+
+    context 'failure' do
+      let(:response_error_body) { { message: 'Update failed' } }
+
+      it 'should raise error' do
+        allow_any_instance_of(Faraday::Connection).to receive(:put).with(listings_url).and_return(
+          double(Faraday::Response, status: 400, body: response_error_body, success?: false)
+        )
+        expect do
+          Fastlane::Helper::AmazonAppstoreHelper.update_listing_metadata(
+            app_id: app_id,
+            edit_id: edit_id,
+            language: language,
+            listing_data: listing_data,
+            token: token
+          )
+        end.to raise_error(StandardError, response_error_body.to_s)
+      end
+    end
+  end
+
+  describe '#load_metadata_from_files' do
+    let(:metadata_path) { './spec/fixtures/metadata/android' }
+    let(:language) { 'en-US' }
+
+    before do
+      FileUtils.mkdir_p(File.join(metadata_path, language))
+      File.write(File.join(metadata_path, language, 'title.txt'), 'Test App')
+      File.write(File.join(metadata_path, language, 'short_description.txt'), 'Short desc')
+      File.write(File.join(metadata_path, language, 'full_description.txt'), 'Full description')
+    end
+
+    after do
+      FileUtils.rm_rf('./spec/fixtures')
+    end
+
+    context 'all files exist' do
+      it 'should return metadata hash' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.load_metadata_from_files(
+          metadata_path: metadata_path,
+          language: language
+        )
+        expect(result[:title]).to eq('Test App')
+        expect(result[:shortDescription]).to eq('Short desc')
+        expect(result[:fullDescription]).to eq('Full description')
+      end
+    end
+
+    context 'some files missing' do
+      before do
+        FileUtils.rm(File.join(metadata_path, language, 'short_description.txt'))
+      end
+
+      it 'should return nil for missing fields' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.load_metadata_from_files(
+          metadata_path: metadata_path,
+          language: language
+        )
+        expect(result[:title]).to eq('Test App')
+        expect(result[:shortDescription]).to be_nil
+        expect(result[:fullDescription]).to eq('Full description')
+      end
+    end
+  end
+
+  describe '#find_images_for_type' do
+    let(:metadata_path) { './spec/fixtures/metadata/android' }
+    let(:language) { 'en-US' }
+    let(:images_path) { File.join(metadata_path, language, 'images') }
+
+    before do
+      FileUtils.mkdir_p(File.join(images_path, 'phoneScreenshots'))
+    end
+
+    after do
+      FileUtils.rm_rf('./spec/fixtures')
+    end
+
+    context 'screenshots' do
+      before do
+        FileUtils.touch(File.join(images_path, 'phoneScreenshots', '1.png'))
+        FileUtils.touch(File.join(images_path, 'phoneScreenshots', '2.png'))
+      end
+
+      it 'should return screenshot files sorted' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'screenshots'
+        )
+        expect(result.length).to eq(2)
+        expect(result[0]).to end_with('1.png')
+        expect(result[1]).to end_with('2.png')
+      end
+    end
+
+    context 'icon' do
+      before do
+        FileUtils.touch(File.join(images_path, 'icon.png'))
+      end
+
+      it 'should return icon file' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'small-icons'
+        )
+        expect(result.length).to eq(1)
+        expect(result[0]).to end_with('icon.png')
+      end
+    end
+
+    context 'no images found' do
+      it 'should return empty array' do
+        result = Fastlane::Helper::AmazonAppstoreHelper.find_images_for_type(
+          metadata_path: metadata_path,
+          language: language,
+          image_type: 'promo-images'
+        )
+        expect(result).to eq([])
       end
     end
   end

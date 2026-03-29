@@ -7,7 +7,7 @@ module Fastlane
   UI = FastlaneCore::UI unless Fastlane.const_defined?(:UI)
 
   module Helper
-    class AmazonAppstoreHelper
+    class AmazonAppstoreHelper # rubocop:disable Metrics/ClassLength
       BASE_URL = 'https://developer.amazon.com'
       AUTH_URL = 'https://api.amazon.com/auth/o2/token'
 
@@ -186,6 +186,7 @@ module Fastlane
 
       def self.update_listings_for_multiple_apks(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
         return if skip_upload_changelogs
+        return if version_codes.empty?
 
         UI.message("Updating listings for #{version_codes.length} version codes: #{version_codes.join(', ')}")
 
@@ -258,6 +259,142 @@ module Fastlane
           raise StandardError, update_listings_response.body unless update_listings_response.success?
         end
         nil
+      end
+
+      def self.upload_image(app_id:, edit_id:, language:, image_type:, image_path:, token:)
+        images_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}"
+        etag_response = api_client.get(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        upload_path = "#{images_path}/upload"
+        upload_response = api_client.post(upload_path) do |request|
+          request.body = File.binread(image_path)
+          request.headers['Content-Length'] = request.body.bytesize.to_s
+          request.headers['Content-Type'] = 'application/octet-stream'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, upload_response.body unless upload_response.success?
+
+        upload_response.body[:id]
+      end
+
+      def self.get_images(app_id:, edit_id:, language:, image_type:, token:)
+        images_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}"
+        images_response = api_client.get(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, images_response.body unless images_response.success?
+
+        images_response.body
+      end
+
+      def self.delete_all_images(app_id:, edit_id:, language:, image_type:, token:)
+        images_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/#{image_type}"
+        etag_response = api_client.get(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        delete_response = api_client.delete(images_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, delete_response.body unless delete_response.success?
+
+        nil
+      end
+
+      def self.upload_video(app_id:, edit_id:, language:, video_path:, token:)
+        videos_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}/videos"
+        etag_response = api_client.get(videos_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        upload_response = api_client.post(videos_path) do |request|
+          request.body = File.binread(video_path)
+          request.headers['Content-Length'] = request.body.bytesize.to_s
+          request.headers['Content-Type'] = 'application/octet-stream'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, upload_response.body unless upload_response.success?
+
+        upload_response.body[:id]
+      end
+
+      def self.update_listing_metadata(app_id:, edit_id:, language:, listing_data:, token:)
+        listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{language}"
+        etag_response = api_client.get(listings_path) do |request|
+          request.headers['Authorization'] = "Bearer #{token}"
+        end
+        raise StandardError, etag_response.body unless etag_response.success?
+
+        etag = etag_response.headers['Etag']
+        existing_data = etag_response.body
+        merged_data = existing_data.merge(listing_data.compact)
+        merged_data[:recentChanges] = '-' if merged_data[:recentChanges].nil? || merged_data[:recentChanges].empty?
+
+        update_response = api_client.put(listings_path) do |request|
+          request.body = merged_data.to_json
+          request.headers['Content-Type'] = 'application/json'
+          request.headers['Authorization'] = "Bearer #{token}"
+          request.headers['If-Match'] = etag
+        end
+        raise StandardError, update_response.body unless update_response.success?
+
+        nil
+      end
+
+      def self.load_metadata_from_files(metadata_path:, language:)
+        lang_path = File.join(metadata_path, language)
+        {
+          title: read_metadata_file(lang_path, 'title.txt'),
+          shortDescription: read_metadata_file(lang_path, 'short_description.txt'),
+          fullDescription: read_metadata_file(lang_path, 'full_description.txt')
+        }
+      end
+
+      def self.read_metadata_file(lang_path, filename)
+        path = File.join(lang_path, filename)
+        return nil unless File.exist?(path)
+
+        File.read(path, encoding: 'UTF-8').strip
+      end
+      private_class_method :read_metadata_file
+
+      IMAGE_TYPE_MAPPING = {
+        'screenshots' => 'phoneScreenshots',
+        'small-icons' => 'icon.png',
+        'large-icons' => 'large_icon.png',
+        'promo-images' => 'featureGraphic.png',
+        'firetv-icons' => 'tvBanner.png',
+        'firetv-backgrounds' => 'tvBackground.png',
+        'firetv-screenshots' => 'tvScreenshots',
+        'firetv-featured-backgrounds' => 'tvFeaturedBackground.png',
+        'firetv-featured-logos' => 'tvFeaturedLogo.png'
+      }.freeze
+
+      def self.find_images_for_type(metadata_path:, language:, image_type:)
+        images_path = File.join(metadata_path, language, 'images')
+        mapping = IMAGE_TYPE_MAPPING[image_type]
+        return [] if mapping.nil?
+
+        target_path = File.join(images_path, mapping)
+
+        if File.directory?(target_path)
+          Dir.glob(File.join(target_path, '*.{png,jpg,jpeg}')).sort
+        elsif File.exist?(target_path)
+          [target_path]
+        else
+          []
+        end
       end
 
       def self.commit_edits(app_id:, edit_id:, token:)

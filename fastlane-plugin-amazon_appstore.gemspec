@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Match fastlane's Ruby requirement for ecosystem compatibility
-  spec.required_ruby_version = '>= 2.6'
+  spec.required_ruby_version = '>= 2.7'
 
   # Don't add a dependency to fastlane or fastlane_re
   # since this would cause a circular dependency
