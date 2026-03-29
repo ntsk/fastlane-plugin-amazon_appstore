@@ -271,7 +271,8 @@ module Fastlane
         etag = etag_response.headers['Etag']
         upload_path = "#{images_path}/upload"
         upload_response = api_client.post(upload_path) do |request|
-          request.body = Faraday::UploadIO.new(image_path, 'application/octet-stream')
+          request.body = File.binread(image_path)
+          request.headers['Content-Length'] = request.body.bytesize.to_s
           request.headers['Content-Type'] = 'application/octet-stream'
           request.headers['Authorization'] = "Bearer #{token}"
           request.headers['If-Match'] = etag
@@ -317,7 +318,8 @@ module Fastlane
 
         etag = etag_response.headers['Etag']
         upload_response = api_client.post(videos_path) do |request|
-          request.body = Faraday::UploadIO.new(video_path, 'application/octet-stream')
+          request.body = File.binread(video_path)
+          request.headers['Content-Length'] = request.body.bytesize.to_s
           request.headers['Content-Type'] = 'application/octet-stream'
           request.headers['Authorization'] = "Bearer #{token}"
           request.headers['If-Match'] = etag
@@ -337,6 +339,7 @@ module Fastlane
         etag = etag_response.headers['Etag']
         existing_data = etag_response.body
         merged_data = existing_data.merge(listing_data.compact)
+        merged_data[:recentChanges] = '-' if merged_data[:recentChanges].nil? || merged_data[:recentChanges].empty?
 
         update_response = api_client.put(listings_path) do |request|
           request.body = merged_data.to_json
