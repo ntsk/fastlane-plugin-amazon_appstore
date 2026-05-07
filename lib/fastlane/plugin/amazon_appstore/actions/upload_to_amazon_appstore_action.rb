@@ -93,7 +93,7 @@ module Fastlane
 
         UI.message("Updating release notes...")
         begin
-          Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          Helper::AmazonAppstoreHelper.update_changelogs(
             app_id: params[:package_name],
             edit_id: edit_id,
             token: token,
@@ -103,7 +103,7 @@ module Fastlane
           )
         rescue StandardError => e
           UI.error(e.message)
-          UI.abort_with_message!("Failed to update listings")
+          UI.abort_with_message!("Failed to update changelogs")
         end
 
         upload_metadata(params, edit_id, token) unless params[:skip_upload_metadata]

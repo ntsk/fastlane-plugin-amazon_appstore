@@ -314,7 +314,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
-  describe '#update_listings_for_multiple_apks' do
+  describe '#update_changelogs' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
     let(:token) { 'token' }
@@ -346,13 +346,13 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       allow_any_instance_of(Faraday::Connection).to receive(:put).and_return(
         double(Faraday::Response, status: 204, body: {}, success?: true)
       )
-      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog_for_multiple_version_codes).and_return('Test changelog')
+      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog).and_return('Test changelog')
     end
 
     context 'success' do
       it 'should update listings for all languages' do
         expect do
-          Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
             app_id: app_id,
             edit_id: edit_id,
             token: token,
@@ -363,8 +363,8 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         end.not_to raise_error
       end
 
-      it 'should call find_changelog_for_multiple_version_codes with correct parameters' do
-        Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+      it 'should call find_changelog with the highest version code for each language' do
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -372,14 +372,16 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           skip_upload_changelogs: skip_upload_changelogs,
           metadata_path: metadata_path
         )
-        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'en-US',
-          version_codes: version_codes,
+          version_code: 300,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
-        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'ja-JP',
-          version_codes: version_codes,
+          version_code: 300,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
       end
@@ -389,7 +391,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       let(:version_codes) { [] }
 
       it 'should return early without processing' do
-        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -398,7 +400,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           metadata_path: metadata_path
         )
         expect(result).to be_nil
-        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog)
       end
     end
 
@@ -406,7 +408,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       let(:skip_upload_changelogs) { true }
 
       it 'should return early without processing' do
-        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -415,109 +417,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           metadata_path: metadata_path
         )
         expect(result).to be_nil
-        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
-      end
-    end
-  end
-
-  describe '#update_listings' do
-    let(:app_id) { 'app_id' }
-    let(:edit_id) { 'edit_id' }
-    let(:token) { 'token' }
-    let(:version_code) { '1000000' }
-    let(:skip_upload_changelogs) { false }
-    let(:metadata_path) { './fastlane/metadata/android' }
-    let(:lang_us) { 'en-US' }
-    let(:lang_jp) { 'ja-JP' }
-    let(:listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings" }
-    let(:us_listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{lang_us}" }
-    let(:jp_listings_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{lang_jp}" }
-    let(:listings_response_body) do
-      {
-        listings: {
-          'en-US': {
-            language: lang_us,
-            title: 'title',
-            fullDescription: 'fullDescription',
-            shortDescription: 'shortDescription',
-            recentChanges: nil,
-            featureBullets: ['featureBullets'],
-            keywords: ['keywords']
-          },
-          'ja-JP': {
-            language: lang_jp,
-            title: 'title',
-            fullDescription: 'fullDescription',
-            shortDescription: 'shortDescription',
-            recentChanges: nil,
-            featureBullets: ['featureBullets'],
-            keywords: ['keywords']
-          }
-        }
-      }
-    end
-    let(:us_listings_response_body) do
-      {
-        language: lang_us,
-        title: 'title',
-        fullDescription: 'fullDescription',
-        shortDescription: 'shortDescription',
-        recentChanges: nil,
-        featureBullets: ['featureBullets'],
-        keywords: ['keywords']
-      }
-    end
-    let(:jp_listings_response_body) do
-      {
-        language: lang_jp,
-        title: 'title',
-        fullDescription: 'fullDescription',
-        shortDescription: 'shortDescription',
-        recentChanges: nil,
-        featureBullets: ['featureBullets'],
-        keywords: ['keywords']
-      }
-    end
-    let(:response_error_body) do
-      {
-        error_description: "Client authentication failed",
-        error: "invalid_client"
-      }
-    end
-
-    before do
-      allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
-        double(Faraday::Response, status: 200, body: listings_response_body, success?: true, headers: { 'Etag' => 'AAAA' })
-      )
-      allow_any_instance_of(Faraday::Connection).to receive(:put).with(us_listings_url).and_return(
-        double(Faraday::Response, status: 204, body: us_listings_response_body, success?: true)
-      )
-      allow_any_instance_of(Faraday::Connection).to receive(:put).with(jp_listings_url).and_return(
-        double(Faraday::Response, status: 204, body: jp_listings_response_body, success?: true)
-      )
-    end
-
-    context 'success' do
-      it 'should not raise error' do
-        expect(Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path)).to eq(nil)
-      end
-    end
-
-    context 'failed to get listings' do
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:get).with(listings_url).and_return(
-          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
-        )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
-      end
-    end
-
-    context 'failed to put listings' do
-      it 'should raise error' do
-        allow_any_instance_of(Faraday::Connection).to receive(:put).with(us_listings_url).and_return(
-          double(Faraday::Response, status: 401, body: response_error_body, success?: false)
-        )
-        expect { Fastlane::Helper::AmazonAppstoreHelper.update_listings(app_id: app_id, edit_id: edit_id, token: token, version_code: version_code, skip_upload_changelogs: skip_upload_changelogs, metadata_path: metadata_path) }.to raise_error(StandardError, response_error_body.to_s)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog)
       end
     end
   end

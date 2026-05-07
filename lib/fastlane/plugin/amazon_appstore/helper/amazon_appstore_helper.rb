@@ -99,7 +99,6 @@ module Fastlane
         existing_apks = get_apks_response.body
         raise StandardError, 'No existing APKs found in edit' if existing_apks.empty?
 
-        version_codes = []
         apk_results = []
 
         apk_paths.each_with_index do |apk_path, index|
@@ -129,7 +128,6 @@ module Fastlane
             raise StandardError, replace_apk_response.body unless replace_apk_response.success?
 
             version_code = replace_apk_response.body[:versionCode]
-            version_codes << version_code
             apk_results << { version_code: version_code, apk_id: apk_id }
           else
             # Upload new APK if there are more APK paths than existing APKs
@@ -139,7 +137,6 @@ module Fastlane
               edit_id: edit_id,
               token: token
             )
-            version_codes << result[:version_code]
             apk_results << result
           end
         end
@@ -184,20 +181,20 @@ module Fastlane
         UI.message("Successfully deleted APK #{apk_id}")
       end
 
-      def self.update_listings_for_multiple_apks(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
+      def self.update_changelogs(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
         return if skip_upload_changelogs
         return if version_codes.empty?
 
-        UI.message("Updating listings for #{version_codes.length} version codes: #{version_codes.join(', ')}")
+        # Use the highest version code's changelog (same as Fastlane's approach)
+        max_version_code = version_codes.max
+        UI.message("Updating changelogs using highest version code: #{max_version_code}")
 
-        # Get listings once with ETag
         listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings"
         listings_response = api_client.get(listings_path) do |request|
           request.headers['Authorization'] = "Bearer #{token}"
         end
         raise StandardError, listings_response.body unless listings_response.success?
 
-        # Process each language once
         listings_response.body[:listings].each do |lang, listing|
           # Get fresh ETag for each language update to avoid conflicts
           etag_response = api_client.get(listings_path) do |request|
@@ -207,48 +204,12 @@ module Fastlane
 
           etag = etag_response.headers['Etag']
 
-          # Find the best changelog for multiple version codes
-          recent_changes = find_changelog_for_multiple_version_codes(
+          listing[:recentChanges] = find_changelog(
             language: listing[:language],
-            version_codes: version_codes,
+            version_code: max_version_code,
+            skip_upload_changelogs: false,
             metadata_path: metadata_path
           )
-          listing[:recentChanges] = recent_changes
-
-          # Update listings once per language
-          update_listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{lang}"
-          update_listings_response = api_client.put(update_listings_path) do |request|
-            request.body = listing.to_json
-            request.headers['Authorization'] = "Bearer #{token}"
-            request.headers['If-Match'] = etag
-          end
-          raise StandardError, update_listings_response.body unless update_listings_response.success?
-        end
-        nil
-      end
-
-      def self.update_listings(app_id:, edit_id:, token:, version_code:, skip_upload_changelogs:, metadata_path:)
-        listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings"
-        listings_response = api_client.get(listings_path) do |request|
-          request.headers['Authorization'] = "Bearer #{token}"
-        end
-        raise StandardError, listings_response.body unless listings_response.success?
-
-        listings_response.body[:listings].each do |lang, listing|
-          etag_response = api_client.get(listings_path) do |request|
-            request.headers['Authorization'] = "Bearer #{token}"
-          end
-          raise StandardError, etag_response.body unless etag_response.success?
-
-          etag = etag_response.headers['Etag']
-
-          recent_changes = find_changelog(
-            language: listing[:language],
-            version_code: version_code,
-            skip_upload_changelogs: skip_upload_changelogs,
-            metadata_path: metadata_path
-          )
-          listing[:recentChanges] = recent_changes
 
           update_listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/#{lang}"
           update_listings_response = api_client.put(update_listings_path) do |request|
@@ -438,18 +399,6 @@ module Fastlane
         end
       end
       private_class_method :auth_client
-
-      def self.find_changelog_for_multiple_version_codes(language:, version_codes:, metadata_path:)
-        # Use the highest version code's changelog (same as Fastlane's approach)
-        max_version_code = version_codes.max
-        UI.message("Using changelog for highest version code: #{max_version_code}")
-        find_changelog(
-          language: language,
-          version_code: max_version_code,
-          skip_upload_changelogs: false,
-          metadata_path: metadata_path
-        )
-      end
 
       def self.find_changelog(language:, version_code:, skip_upload_changelogs:, metadata_path:)
         # The Amazon appstore requires you to enter changelogs before reviewing.
