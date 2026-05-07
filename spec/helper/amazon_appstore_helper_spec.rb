@@ -173,8 +173,8 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:apks_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks" }
     let(:existing_apks) do
       [
-        { versionCode: '1000000', id: apk_id_1, name: 'APK1' },
-        { versionCode: '2000000', id: apk_id_2, name: 'APK2' }
+        { versionCode: 1000000, id: apk_id_1, name: 'APK1' },
+        { versionCode: 2000000, id: apk_id_2, name: 'APK2' }
       ]
     end
 
@@ -189,7 +189,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         double(Faraday::Response, status: 200, body: existing_apks[1], success?: true, headers: { 'Etag' => 'BBBB' })
       )
       allow_any_instance_of(Faraday::Connection).to receive(:put).and_return(
-        double(Faraday::Response, status: 204, body: { versionCode: '3000000' }, success?: true)
+        double(Faraday::Response, status: 204, body: { versionCode: 3000000 }, success?: true)
       )
     end
 
@@ -202,8 +202,8 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           token: token
         )
         expect(result).to eq([
-                               { version_code: '3000000', apk_id: apk_id_1 },
-                               { version_code: '3000000', apk_id: apk_id_2 }
+                               { version_code: 3000000, apk_id: apk_id_1 },
+                               { version_code: 3000000, apk_id: apk_id_2 }
                              ])
       end
     end
@@ -213,7 +213,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
 
       before do
         allow_any_instance_of(Faraday::Connection).to receive(:post).with("#{apks_url}/upload").and_return(
-          double(Faraday::Response, status: 201, body: { versionCode: '4000000', id: 'C' }, success?: true)
+          double(Faraday::Response, status: 201, body: { versionCode: 4000000, id: 'C' }, success?: true)
         )
       end
 
@@ -225,9 +225,9 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           token: token
         )
         expect(result).to eq([
-                               { version_code: '3000000', apk_id: apk_id_1 },
-                               { version_code: '3000000', apk_id: apk_id_2 },
-                               { version_code: '4000000', apk_id: 'C' }
+                               { version_code: 3000000, apk_id: apk_id_1 },
+                               { version_code: 3000000, apk_id: apk_id_2 },
+                               { version_code: 4000000, apk_id: 'C' }
                              ])
       end
     end
@@ -249,7 +249,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           token: token
         )
         expect(result).to eq([
-                               { version_code: '3000000', apk_id: apk_id_1 }
+                               { version_code: 3000000, apk_id: apk_id_1 }
                              ])
       end
     end
@@ -262,7 +262,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:token) { 'token' }
     let(:upload_url) { "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/upload" }
     let(:upload_response) do
-      { versionCode: '5000000', id: 'NEW_APK_ID' }
+      { versionCode: 5000000, id: 'NEW_APK_ID' }
     end
 
     before do
@@ -279,7 +279,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           edit_id: edit_id,
           token: token
         )
-        expect(result).to eq({ version_code: '5000000', apk_id: 'NEW_APK_ID' })
+        expect(result).to eq({ version_code: 5000000, apk_id: 'NEW_APK_ID' })
       end
     end
   end
