@@ -314,7 +314,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
-  describe '#update_listings_for_multiple_apks' do
+  describe '#update_changelogs' do
     let(:app_id) { 'app_id' }
     let(:edit_id) { 'edit_id' }
     let(:token) { 'token' }
@@ -346,13 +346,13 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       allow_any_instance_of(Faraday::Connection).to receive(:put).and_return(
         double(Faraday::Response, status: 204, body: {}, success?: true)
       )
-      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog_for_multiple_version_codes).and_return('Test changelog')
+      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog).and_return('Test changelog')
     end
 
     context 'success' do
       it 'should update listings for all languages' do
         expect do
-          Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+          Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
             app_id: app_id,
             edit_id: edit_id,
             token: token,
@@ -363,8 +363,8 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         end.not_to raise_error
       end
 
-      it 'should call find_changelog_for_multiple_version_codes with correct parameters' do
-        Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+      it 'should call find_changelog with the highest version code for each language' do
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -372,14 +372,16 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           skip_upload_changelogs: skip_upload_changelogs,
           metadata_path: metadata_path
         )
-        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'en-US',
-          version_codes: version_codes,
+          version_code: 300,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
-        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog_for_multiple_version_codes).with(
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'ja-JP',
-          version_codes: version_codes,
+          version_code: 300,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
       end
@@ -389,7 +391,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       let(:version_codes) { [] }
 
       it 'should return early without processing' do
-        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -398,7 +400,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           metadata_path: metadata_path
         )
         expect(result).to be_nil
-        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog)
       end
     end
 
@@ -406,7 +408,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
       let(:skip_upload_changelogs) { true }
 
       it 'should return early without processing' do
-        result = Fastlane::Helper::AmazonAppstoreHelper.update_listings_for_multiple_apks(
+        result = Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -415,7 +417,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           metadata_path: metadata_path
         )
         expect(result).to be_nil
-        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog_for_multiple_version_codes)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog)
       end
     end
   end

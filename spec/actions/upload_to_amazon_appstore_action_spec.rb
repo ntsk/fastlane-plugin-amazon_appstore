@@ -24,7 +24,7 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:get_edits).and_return([nil, nil])
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:create_edits).and_return('edit_id')
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:replace_apks).and_return([{ version_code: 100, apk_id: 'apk_id_1' }])
-      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_listings_for_multiple_apks).and_return(nil)
+      allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_changelogs).and_return(nil)
       allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:commit_edits).and_return(nil)
     end
 
@@ -71,10 +71,10 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
       end
     end
 
-    context 'failed to update_listings_for_multiple_apks' do
+    context 'failed to update_changelogs' do
       it 'should raise error' do
-        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_listings_for_multiple_apks).and_raise('error')
-        expect { Fastlane::Actions::UploadToAmazonAppstoreAction.run(params) }.to raise_error(FastlaneCore::Interface::FastlaneCommonException, 'Failed to update listings')
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:update_changelogs).and_raise('error')
+        expect { Fastlane::Actions::UploadToAmazonAppstoreAction.run(params) }.to raise_error(FastlaneCore::Interface::FastlaneCommonException, 'Failed to update changelogs')
       end
     end
 
@@ -251,9 +251,9 @@ describe Fastlane::Actions::UploadToAmazonAppstoreAction do
           )
         end
 
-        it 'should call update_listings_for_multiple_apks with version codes' do
+        it 'should call update_changelogs with version codes' do
           Fastlane::Actions::UploadToAmazonAppstoreAction.run(params)
-          expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:update_listings_for_multiple_apks).with(
+          expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:update_changelogs).with(
             app_id: 'package_name',
             edit_id: 'edit_id',
             token: 'token',
