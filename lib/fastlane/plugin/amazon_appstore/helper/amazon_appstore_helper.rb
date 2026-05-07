@@ -195,14 +195,19 @@ module Fastlane
         end
         raise StandardError, listings_response.body unless listings_response.success?
 
-        listings_response.body[:listings].each do |lang, listing|
-          # Get fresh ETag for each language update to avoid conflicts
-          etag_response = api_client.get(listings_path) do |request|
-            request.headers['Authorization'] = "Bearer #{token}"
-          end
-          raise StandardError, etag_response.body unless etag_response.success?
+        etag = listings_response.headers['Etag']
 
-          etag = etag_response.headers['Etag']
+        listings_response.body[:listings].each_with_index do |(lang, listing), index|
+          # Refresh ETag after the first iteration because the previous PUT
+          # invalidates the collection's ETag.
+          if index > 0
+            etag_response = api_client.get(listings_path) do |request|
+              request.headers['Authorization'] = "Bearer #{token}"
+            end
+            raise StandardError, etag_response.body unless etag_response.success?
+
+            etag = etag_response.headers['Etag']
+          end
 
           listing[:recentChanges] = find_changelog(
             language: listing[:language],
