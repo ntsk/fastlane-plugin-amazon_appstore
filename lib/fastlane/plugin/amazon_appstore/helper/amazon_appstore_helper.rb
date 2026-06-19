@@ -350,7 +350,7 @@ module Fastlane
         target_path = File.join(images_path, mapping)
 
         if File.directory?(target_path)
-          Dir.glob(File.join(target_path, '*.{png,jpg,jpeg}')).sort
+          Dir.glob(File.join(target_path, '*.{png,jpg,jpeg}'))
         elsif File.exist?(target_path)
           [target_path]
         else
