@@ -15,8 +15,8 @@ Gem::Specification.new do |spec|
   spec.files         = Dir["lib/**/*"] + %w(README.md LICENSE)
   spec.require_paths = ['lib']
 
-  # Match fastlane's Ruby requirement for ecosystem compatibility
-  spec.required_ruby_version = '>= 2.7'
+  # The fastlane ecosystem effectively requires Ruby 3.0+ now
+  spec.required_ruby_version = '>= 3.0'
 
   # Don't add a dependency to fastlane or fastlane_re
   # since this would cause a circular dependency
