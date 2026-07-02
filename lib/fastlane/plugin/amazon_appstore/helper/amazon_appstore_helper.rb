@@ -182,11 +182,17 @@ module Fastlane
       end
 
       def self.update_changelogs(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
-        return if version_codes.empty?
+        # Without an uploaded APK there is no version-specific changelog to read,
+        # so fall back to only ensuring the "-" placeholder is present.
+        skip_upload_changelogs ||= version_codes.empty?
 
         # Use the highest version code's changelog (same as Fastlane's approach)
         max_version_code = version_codes.max
-        UI.message("Updating changelogs using highest version code: #{max_version_code}")
+        if max_version_code.nil?
+          UI.message("Ensuring release notes placeholder is present...")
+        else
+          UI.message("Updating changelogs using highest version code: #{max_version_code}")
+        end
 
         listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings"
         listings_response = api_client.get(listings_path) do |request|
