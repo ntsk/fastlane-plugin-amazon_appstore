@@ -182,12 +182,13 @@ module Fastlane
       end
 
       def self.update_changelogs(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
-        return if skip_upload_changelogs
-        return if version_codes.empty?
-
         # Use the highest version code's changelog (same as Fastlane's approach)
         max_version_code = version_codes.max
-        UI.message("Updating changelogs using highest version code: #{max_version_code}")
+        if max_version_code.nil?
+          UI.message("Ensuring release notes placeholder is present...")
+        else
+          UI.message("Updating changelogs using highest version code: #{max_version_code}")
+        end
 
         listings_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings"
         listings_response = api_client.get(listings_path) do |request|
@@ -196,6 +197,10 @@ module Fastlane
         raise StandardError, listings_response.body unless listings_response.success?
 
         listings_response.body[:listings].each do |lang, listing|
+          # When only the "-" placeholder would be written, keep existing
+          # release notes untouched and fill it in only when they are missing.
+          next if (skip_upload_changelogs || max_version_code.nil?) && !listing[:recentChanges].to_s.strip.empty?
+
           # Get fresh ETag for each language update to avoid conflicts
           etag_response = api_client.get(listings_path) do |request|
             request.headers['Authorization'] = "Bearer #{token}"
@@ -207,7 +212,7 @@ module Fastlane
           listing[:recentChanges] = find_changelog(
             language: listing[:language],
             version_code: max_version_code,
-            skip_upload_changelogs: false,
+            skip_upload_changelogs: skip_upload_changelogs,
             metadata_path: metadata_path
           )
 
@@ -404,7 +409,7 @@ module Fastlane
         # The Amazon appstore requires you to enter changelogs before reviewing.
         # Therefore, if there is no metadata, hyphen text is returned.
         changelog_text = '-'
-        return changelog_text if skip_upload_changelogs
+        return changelog_text if skip_upload_changelogs || version_code.nil?
 
         path = File.join(metadata_path, language, 'changelogs', "#{version_code}.txt")
         if File.exist?(path) && !File.empty?(path)
