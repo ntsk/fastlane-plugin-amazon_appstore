@@ -1,4 +1,5 @@
 require 'faraday'
+require 'tmpdir'
 
 describe Fastlane::Helper::AmazonAppstoreHelper do
   describe '#setup' do
@@ -443,6 +444,66 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           metadata_path: metadata_path
         )
       end
+
+      it 'should write "-" as the recentChanges value' do
+        allow(Fastlane::Helper::AmazonAppstoreHelper).to receive(:find_changelog).and_call_original
+        captured_bodies = []
+        request_spy = double('request', headers: {})
+        allow(request_spy).to receive(:body=) { |value| captured_bodies << value }
+        allow_any_instance_of(Faraday::Connection).to receive(:put) do |_instance, _path, &block|
+          block.call(request_spy)
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        end
+
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
+
+        parsed = captured_bodies.map { |body| JSON.parse(body) }
+        expect(parsed.length).to eq(2)
+        expect(parsed).to all(include('recentChanges' => '-'))
+      end
+    end
+
+    context 'skip_upload_changelogs is true and release notes exist for only some languages' do
+      let(:skip_upload_changelogs) { true }
+      let(:listings_response_body) do
+        {
+          listings: {
+            'en-US': {
+              language: 'en-US',
+              title: 'title',
+              recentChanges: nil
+            },
+            'ja-JP': {
+              language: 'ja-JP',
+              title: 'title',
+              recentChanges: '既存のリリースノート'
+            }
+          }
+        }
+      end
+
+      it 'should fill the placeholder only for languages without release notes' do
+        expect_any_instance_of(Faraday::Connection).to receive(:put).once.with(
+          "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/listings/en-US"
+        ).and_return(
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        )
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
+      end
     end
 
     context 'skip_upload_changelogs is true and release notes already exist' do
@@ -474,6 +535,71 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           skip_upload_changelogs: skip_upload_changelogs,
           metadata_path: metadata_path
         )
+      end
+    end
+  end
+
+  describe '#find_changelog' do
+    let(:language) { 'en-US' }
+    let(:version_code) { 100 }
+
+    it 'should return "-" when skip_upload_changelogs is true' do
+      Dir.mktmpdir do |metadata_path|
+        result = Fastlane::Helper::AmazonAppstoreHelper.send(
+          :find_changelog,
+          language: language,
+          version_code: version_code,
+          skip_upload_changelogs: true,
+          metadata_path: metadata_path
+        )
+        expect(result).to eq('-')
+      end
+    end
+
+    it 'should return "-" when no changelog file exists' do
+      Dir.mktmpdir do |metadata_path|
+        result = Fastlane::Helper::AmazonAppstoreHelper.send(
+          :find_changelog,
+          language: language,
+          version_code: version_code,
+          skip_upload_changelogs: false,
+          metadata_path: metadata_path
+        )
+        expect(result).to eq('-')
+      end
+    end
+
+    it 'should return the changelog file content for the version code' do
+      Dir.mktmpdir do |metadata_path|
+        changelogs_dir = File.join(metadata_path, language, 'changelogs')
+        FileUtils.mkdir_p(changelogs_dir)
+        File.write(File.join(changelogs_dir, "#{version_code}.txt"), 'Version changelog')
+
+        result = Fastlane::Helper::AmazonAppstoreHelper.send(
+          :find_changelog,
+          language: language,
+          version_code: version_code,
+          skip_upload_changelogs: false,
+          metadata_path: metadata_path
+        )
+        expect(result).to eq('Version changelog')
+      end
+    end
+
+    it 'should fall back to default.txt when the version file is missing' do
+      Dir.mktmpdir do |metadata_path|
+        changelogs_dir = File.join(metadata_path, language, 'changelogs')
+        FileUtils.mkdir_p(changelogs_dir)
+        File.write(File.join(changelogs_dir, 'default.txt'), 'Default changelog')
+
+        result = Fastlane::Helper::AmazonAppstoreHelper.send(
+          :find_changelog,
+          language: language,
+          version_code: version_code,
+          skip_upload_changelogs: false,
+          metadata_path: metadata_path
+        )
+        expect(result).to eq('Default changelog')
       end
     end
   end
