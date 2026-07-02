@@ -444,6 +444,38 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         )
       end
     end
+
+    context 'skip_upload_changelogs is true and release notes already exist' do
+      let(:skip_upload_changelogs) { true }
+      let(:listings_response_body) do
+        {
+          listings: {
+            'en-US': {
+              language: 'en-US',
+              title: 'title',
+              recentChanges: 'Existing release notes'
+            },
+            'ja-JP': {
+              language: 'ja-JP',
+              title: 'title',
+              recentChanges: '既存のリリースノート'
+            }
+          }
+        }
+      end
+
+      it 'should not overwrite existing release notes' do
+        expect_any_instance_of(Faraday::Connection).not_to receive(:put)
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
+      end
+    end
   end
 
   describe '#upload_image' do
