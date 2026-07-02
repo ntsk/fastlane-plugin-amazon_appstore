@@ -403,13 +403,13 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
         expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'en-US',
           version_code: nil,
-          skip_upload_changelogs: true,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
         expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
           language: 'ja-JP',
           version_code: nil,
-          skip_upload_changelogs: true,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
       end
@@ -605,6 +605,23 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           language: language,
           version_code: version_code,
           skip_upload_changelogs: true,
+          metadata_path: metadata_path
+        )
+        expect(result).to eq('-')
+      end
+    end
+
+    it 'should return "-" when version_code is nil' do
+      Dir.mktmpdir do |metadata_path|
+        changelogs_dir = File.join(metadata_path, language, 'changelogs')
+        FileUtils.mkdir_p(changelogs_dir)
+        File.write(File.join(changelogs_dir, 'default.txt'), 'Default changelog')
+
+        result = Fastlane::Helper::AmazonAppstoreHelper.send(
+          :find_changelog,
+          language: language,
+          version_code: nil,
+          skip_upload_changelogs: false,
           metadata_path: metadata_path
         )
         expect(result).to eq('-')

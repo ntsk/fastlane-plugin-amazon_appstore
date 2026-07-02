@@ -182,10 +182,6 @@ module Fastlane
       end
 
       def self.update_changelogs(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
-        # Without an uploaded APK there is no version-specific changelog to read,
-        # so fall back to only ensuring the "-" placeholder is present.
-        skip_upload_changelogs ||= version_codes.empty?
-
         # Use the highest version code's changelog (same as Fastlane's approach)
         max_version_code = version_codes.max
         if max_version_code.nil?
@@ -201,9 +197,9 @@ module Fastlane
         raise StandardError, listings_response.body unless listings_response.success?
 
         listings_response.body[:listings].each do |lang, listing|
-          # When skipping changelog upload, keep existing release notes untouched
-          # and only fill in the "-" placeholder when they are missing.
-          next if skip_upload_changelogs && !listing[:recentChanges].to_s.strip.empty?
+          # When only the "-" placeholder would be written, keep existing
+          # release notes untouched and fill it in only when they are missing.
+          next if (skip_upload_changelogs || max_version_code.nil?) && !listing[:recentChanges].to_s.strip.empty?
 
           # Get fresh ETag for each language update to avoid conflicts
           etag_response = api_client.get(listings_path) do |request|
@@ -413,7 +409,7 @@ module Fastlane
         # The Amazon appstore requires you to enter changelogs before reviewing.
         # Therefore, if there is no metadata, hyphen text is returned.
         changelog_text = '-'
-        return changelog_text if skip_upload_changelogs
+        return changelog_text if skip_upload_changelogs || version_code.nil?
 
         path = File.join(metadata_path, language, 'changelogs', "#{version_code}.txt")
         if File.exist?(path) && !File.empty?(path)
