@@ -407,8 +407,8 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     context 'skip_upload_changelogs is true' do
       let(:skip_upload_changelogs) { true }
 
-      it 'should return early without processing' do
-        result = Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
+      it 'should still write the placeholder changelog for each language' do
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
           app_id: app_id,
           edit_id: edit_id,
           token: token,
@@ -416,8 +416,32 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           skip_upload_changelogs: skip_upload_changelogs,
           metadata_path: metadata_path
         )
-        expect(result).to be_nil
-        expect(Fastlane::Helper::AmazonAppstoreHelper).not_to have_received(:find_changelog)
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
+          language: 'en-US',
+          version_code: 300,
+          skip_upload_changelogs: true,
+          metadata_path: metadata_path
+        )
+        expect(Fastlane::Helper::AmazonAppstoreHelper).to have_received(:find_changelog).with(
+          language: 'ja-JP',
+          version_code: 300,
+          skip_upload_changelogs: true,
+          metadata_path: metadata_path
+        )
+      end
+
+      it 'should send the listing update so the placeholder is committed' do
+        expect_any_instance_of(Faraday::Connection).to receive(:put).twice.and_return(
+          double(Faraday::Response, status: 204, body: {}, success?: true)
+        )
+        Fastlane::Helper::AmazonAppstoreHelper.update_changelogs(
+          app_id: app_id,
+          edit_id: edit_id,
+          token: token,
+          version_codes: version_codes,
+          skip_upload_changelogs: skip_upload_changelogs,
+          metadata_path: metadata_path
+        )
       end
     end
   end
