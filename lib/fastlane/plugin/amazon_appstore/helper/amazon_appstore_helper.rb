@@ -195,6 +195,10 @@ module Fastlane
         raise StandardError, listings_response.body unless listings_response.success?
 
         listings_response.body[:listings].each do |lang, listing|
+          # When skipping changelog upload, keep existing release notes untouched
+          # and only fill in the "-" placeholder when they are missing.
+          next if skip_upload_changelogs && !listing[:recentChanges].to_s.strip.empty?
+
           # Get fresh ETag for each language update to avoid conflicts
           etag_response = api_client.get(listings_path) do |request|
             request.headers['Authorization'] = "Bearer #{token}"
