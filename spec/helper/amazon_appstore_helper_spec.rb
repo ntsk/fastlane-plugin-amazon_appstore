@@ -598,8 +598,12 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     let(:language) { 'en-US' }
     let(:version_code) { 100 }
 
-    it 'should return "-" when skip_upload_changelogs is true' do
+    it 'should return "-" when skip_upload_changelogs is true even if a changelog file exists' do
       Dir.mktmpdir do |metadata_path|
+        changelogs_dir = File.join(metadata_path, language, 'changelogs')
+        FileUtils.mkdir_p(changelogs_dir)
+        File.write(File.join(changelogs_dir, "#{version_code}.txt"), 'Version changelog')
+
         result = Fastlane::Helper::AmazonAppstoreHelper.send(
           :find_changelog,
           language: language,
