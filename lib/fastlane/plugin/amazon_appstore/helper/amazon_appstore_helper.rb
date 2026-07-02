@@ -182,7 +182,6 @@ module Fastlane
       end
 
       def self.update_changelogs(app_id:, edit_id:, token:, version_codes:, skip_upload_changelogs:, metadata_path:)
-        return if skip_upload_changelogs
         return if version_codes.empty?
 
         # Use the highest version code's changelog (same as Fastlane's approach)
@@ -207,7 +206,7 @@ module Fastlane
           listing[:recentChanges] = find_changelog(
             language: listing[:language],
             version_code: max_version_code,
-            skip_upload_changelogs: false,
+            skip_upload_changelogs: skip_upload_changelogs,
             metadata_path: metadata_path
           )
 
