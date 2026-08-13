@@ -21,9 +21,8 @@ Gem::Specification.new do |spec|
   # Don't add a dependency to fastlane or fastlane_re
   # since this would cause a circular dependency
 
-  # Faraday 1.x for compatibility with fastlane ecosystem
-  spec.add_runtime_dependency('faraday', '~> 1.0')
-  spec.add_runtime_dependency('faraday_middleware', '~> 1.0')
+  spec.add_runtime_dependency('faraday', '>= 1.0')
+  spec.add_runtime_dependency('faraday-multipart', '>= 1.0')
 
   spec.add_development_dependency('bundler', '>= 1.12.0', '< 5.0.0')
   spec.add_development_dependency('fastlane', '>= 2.199.0')

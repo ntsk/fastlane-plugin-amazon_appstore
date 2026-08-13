@@ -10,6 +10,17 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
   end
 
+  describe '#api_client' do
+    it 'should build multipart, url_encoded and json middleware' do
+      handlers = Fastlane::Helper::AmazonAppstoreHelper.send(:api_client).builder.handlers
+      expect(handlers).to eq([Faraday::Multipart::Middleware, Faraday::Request::UrlEncoded, Faraday::Response::Json])
+    end
+
+    it 'should provide multipart upload support' do
+      expect(Faraday::UploadIO).to be_a(Class)
+    end
+  end
+
   describe '#token' do
     let(:auth_url) { Fastlane::Helper::AmazonAppstoreHelper::AUTH_URL }
     let(:client_id) { 'client_id' }

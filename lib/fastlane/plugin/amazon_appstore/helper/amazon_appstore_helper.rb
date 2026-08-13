@@ -1,6 +1,6 @@
 require 'fastlane_core/ui/ui'
 require 'faraday'
-require 'faraday_middleware'
+require 'faraday/multipart'
 require 'json'
 
 module Fastlane
