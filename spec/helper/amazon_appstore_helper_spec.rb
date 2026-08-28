@@ -17,7 +17,7 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
     end
 
     it 'should provide multipart upload support' do
-      expect(Faraday::UploadIO).to be_a(Class)
+      expect(Faraday::Multipart::FilePart).to be_a(Class)
     end
   end
 
@@ -265,6 +265,32 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
                              ])
       end
     end
+
+    context 'without the deprecated Faraday::UploadIO alias' do
+      let(:request) { Struct.new(:body, :headers).new(nil, {}) }
+
+      it 'should build the request body with Faraday::Multipart::FilePart' do
+        Dir.mktmpdir do |dir|
+          paths = [File.join(dir, 'apk1.apk'), File.join(dir, 'apk2.apk')]
+          paths.each { |path| File.binwrite(path, 'apk-binary') }
+          hide_const('Faraday::UploadIO')
+          allow_any_instance_of(Faraday::Connection).to receive(:put) do |_connection, _path, &block|
+            block.call(request)
+            double(Faraday::Response, status: 204, body: { versionCode: 3_000_000 }, success?: true)
+          end
+
+          Fastlane::Helper::AmazonAppstoreHelper.replace_apks(
+            apk_paths: paths,
+            app_id: app_id,
+            edit_id: edit_id,
+            token: token
+          )
+          expect(request.body).to be_a(Faraday::Multipart::FilePart)
+          expect(request.headers['Content-Length']).to eq(File.size(paths.last).to_s)
+          expect(request.headers['Content-Type']).to eq('application/vnd.android.package-archive')
+        end
+      end
+    end
   end
 
   describe '#upload_apk' do
@@ -292,6 +318,32 @@ describe Fastlane::Helper::AmazonAppstoreHelper do
           token: token
         )
         expect(result).to eq({ version_code: 5_000_000, apk_id: 'NEW_APK_ID' })
+      end
+    end
+
+    context 'without the deprecated Faraday::UploadIO alias' do
+      let(:request) { Struct.new(:body, :headers).new(nil, {}) }
+
+      it 'should build the request body with Faraday::Multipart::FilePart' do
+        Dir.mktmpdir do |dir|
+          apk_path = File.join(dir, 'new.apk')
+          File.binwrite(apk_path, 'apk-binary')
+          hide_const('Faraday::UploadIO')
+          allow_any_instance_of(Faraday::Connection).to receive(:post).with(upload_url) do |_connection, _path, &block|
+            block.call(request)
+            double(Faraday::Response, status: 201, body: upload_response, success?: true)
+          end
+
+          Fastlane::Helper::AmazonAppstoreHelper.upload_apk(
+            local_apk_path: apk_path,
+            app_id: app_id,
+            edit_id: edit_id,
+            token: token
+          )
+          expect(request.body).to be_a(Faraday::Multipart::FilePart)
+          expect(request.headers['Content-Length']).to eq(File.size(apk_path).to_s)
+          expect(request.headers['Content-Type']).to eq('application/vnd.android.package-archive')
+        end
       end
     end
   end
