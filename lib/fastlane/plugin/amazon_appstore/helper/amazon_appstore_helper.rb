@@ -75,7 +75,7 @@ module Fastlane
       def self.upload_apk(local_apk_path:, app_id:, edit_id:, token:)
         upload_apk_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/upload"
         upload_apk_response = api_client.post(upload_apk_path) do |request|
-          request.body = Faraday::UploadIO.new(local_apk_path, 'application/vnd.android.package-archive')
+          request.body = Faraday::Multipart::FilePart.new(local_apk_path, 'application/vnd.android.package-archive')
           request.headers['Content-Length'] = request.body.stat.size.to_s
           request.headers['Content-Type'] = 'application/vnd.android.package-archive'
           request.headers['Authorization'] = "Bearer #{token}"
@@ -119,7 +119,7 @@ module Fastlane
             # Replace the APK
             replace_apk_path = "api/appstore/v1/applications/#{app_id}/edits/#{edit_id}/apks/#{apk_id}/replace"
             replace_apk_response = api_client.put(replace_apk_path) do |request|
-              request.body = Faraday::UploadIO.new(apk_path, 'application/vnd.android.package-archive')
+              request.body = Faraday::Multipart::FilePart.new(apk_path, 'application/vnd.android.package-archive')
               request.headers['Content-Length'] = request.body.stat.size.to_s
               request.headers['Content-Type'] = 'application/vnd.android.package-archive'
               request.headers['Authorization'] = "Bearer #{token}"
