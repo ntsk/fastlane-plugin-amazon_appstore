@@ -1,7 +1,8 @@
 ---
+plugins:
+- rubocop-performance
 require:
 - rubocop/require_tools
-- rubocop-performance
 AllCops:
   TargetRubyVersion: 3.2
   NewCops: enable
@@ -120,7 +121,7 @@ Lint/UnusedMethodArgument:
 Lint/ParenthesesAsGroupedExpression:
   Exclude:
   - "**/spec/**/*"
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 Style/PerlBackrefs:
   Enabled: false
