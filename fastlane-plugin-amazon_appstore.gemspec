@@ -24,16 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency('faraday', '>= 1.0')
   spec.add_runtime_dependency('faraday-multipart', '>= 1.0')
 
-  spec.add_development_dependency('bundler', '>= 1.12.0', '< 5.0.0')
-  spec.add_development_dependency('fastlane', '>= 2.199.0')
-  spec.add_development_dependency('pry', '~> 0.14')
-  spec.add_development_dependency('rake', '~> 13.0')
-  spec.add_development_dependency('rspec', '~> 3.12')
-  spec.add_development_dependency('rspec_junit_formatter', '~> 0.6')
-  spec.add_development_dependency('rubocop', '~> 1.50', '< 1.51')
-  spec.add_development_dependency('rubocop-performance', '~> 1.17')
-  spec.add_development_dependency('rubocop-require_tools', '~> 0.1')
-  spec.add_development_dependency('simplecov', '~> 0.22')
-
   spec.metadata['rubygems_mfa_required'] = 'true'
 end
